@@ -1,4 +1,4 @@
-alias: Basement door control
+alias: Door control
 description: ""
 trigger:
   - alias: Door opened
@@ -32,7 +32,7 @@ trigger:
   - alias: Timer changed
     platform: state
     entity_id:
-      - timer.basement_door
+      - timer.target_door
     for:
       hours: 0
       minutes: 0
@@ -50,7 +50,7 @@ action:
             service: timer.cancel
             data: {}
             target:
-              entity_id: timer.basement_door
+              entity_id: timer.target_door
       - conditions:
           - condition: trigger
             id:
@@ -62,7 +62,7 @@ action:
             data:
               duration: "900"
             target:
-              entity_id: timer.basement_door
+              entity_id: timer.target_door
       - conditions:
           - condition: trigger
             id:
@@ -90,7 +90,7 @@ action:
                 service: timer.cancel
                 data: {}
                 target:
-                  entity_id: timer.basement_door
+                  entity_id: timer.target_door
       - conditions:
           - condition: trigger
             id:
@@ -110,7 +110,7 @@ action:
                 data:
                   duration: "00:05:00"
                 target:
-                  entity_id: timer.basement_door
+                  entity_id: timer.target_door
       - conditions:
           - condition: trigger
             id:
@@ -137,7 +137,7 @@ action:
                     domain: binary_sensor
                   - alias: Verify timer is idle
                     condition: state
-                    entity_id: timer.basement_door
+                    entity_id: timer.target_door
                     state: idle
             then:
               - alias: Lock the door
