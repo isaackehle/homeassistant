@@ -1,0 +1,148 @@
+alias: Basement door control
+description: ""
+trigger:
+  - alias: Door opened
+    type: opened
+    platform: device
+    device_id: 23ebdf276fae772be1863021f48006af
+    entity_id: 8646b9096c88c4bd06c6d6994239272a
+    domain: binary_sensor
+    id: door opened
+  - alias: Door closed
+    type: opened
+    platform: device
+    device_id: 23ebdf276fae772be1863021f48006af
+    entity_id: 8646b9096c88c4bd06c6d6994239272a
+    domain: binary_sensor
+    id: door closed
+  - alias: Door unlocked
+    platform: device
+    device_id: 62870a0c23f29aea798d5df457694639
+    domain: lock
+    entity_id: c11ccf1750befc2bed6037d7e296a581
+    type: unlocked
+    id: door unlocked
+  - alias: Door locked
+    platform: device
+    device_id: 62870a0c23f29aea798d5df457694639
+    domain: lock
+    entity_id: c11ccf1750befc2bed6037d7e296a581
+    type: locked
+    id: door locked
+  - alias: Timer changed
+    platform: state
+    entity_id:
+      - timer.basement_door
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+    id: timer changed
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - door opened
+        sequence:
+          - alias: Cancel timer
+            service: timer.cancel
+            data: {}
+            target:
+              entity_id: timer.basement_door
+      - conditions:
+          - condition: trigger
+            id:
+              - door closed
+        sequence:
+          - alias: Start timer
+            service: timer.start
+            metadata: {}
+            data:
+              duration: "900"
+            target:
+              entity_id: timer.basement_door
+      - conditions:
+          - condition: trigger
+            id:
+              - door locked
+        sequence:
+          - alias: Cancel timer if door is closed and locked
+            if:
+              - alias: Verify door is locked and closed
+                condition: and
+                conditions:
+                  - alias: Verify door is closed
+                    type: is_not_open
+                    condition: device
+                    device_id: 23ebdf276fae772be1863021f48006af
+                    entity_id: 8646b9096c88c4bd06c6d6994239272a
+                    domain: binary_sensor
+                  - alias: Verify door is locked
+                    condition: device
+                    device_id: 62870a0c23f29aea798d5df457694639
+                    domain: lock
+                    entity_id: c11ccf1750befc2bed6037d7e296a581
+                    type: is_locked
+            then:
+              - alias: Cancel timer
+                service: timer.cancel
+                data: {}
+                target:
+                  entity_id: timer.basement_door
+      - conditions:
+          - condition: trigger
+            id:
+              - door unlocked
+        sequence:
+          - alias: Start timer if door is closed
+            if:
+              - alias: Door is closed
+                type: is_not_open
+                condition: device
+                device_id: 23ebdf276fae772be1863021f48006af
+                entity_id: 8646b9096c88c4bd06c6d6994239272a
+                domain: binary_sensor
+            then:
+              - alias: Start timer
+                service: timer.start
+                data:
+                  duration: "00:05:00"
+                target:
+                  entity_id: timer.basement_door
+      - conditions:
+          - condition: trigger
+            id:
+              - timer changed
+        sequence:
+          - alias: >-
+              Lock the door if the door is closed and unlocked, and timer
+              finished
+            if:
+              - alias: Verify door is unlocked and closed, and timer is idle
+                condition: and
+                conditions:
+                  - alias: Verify lock is unlocked
+                    condition: device
+                    device_id: 62870a0c23f29aea798d5df457694639
+                    domain: lock
+                    entity_id: c11ccf1750befc2bed6037d7e296a581
+                    type: is_unlocked
+                  - alias: Verify door is closed
+                    type: is_not_open
+                    condition: device
+                    device_id: 23ebdf276fae772be1863021f48006af
+                    entity_id: 8646b9096c88c4bd06c6d6994239272a
+                    domain: binary_sensor
+                  - alias: Verify timer is idle
+                    condition: state
+                    entity_id: timer.basement_door
+                    state: idle
+            then:
+              - alias: Lock the door
+                service: lock.lock
+                data: {}
+                target:
+                  device_id: 62870a0c23f29aea798d5df457694639
+mode: single

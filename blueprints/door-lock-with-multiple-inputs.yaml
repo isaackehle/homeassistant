@@ -1,0 +1,179 @@
+# https://www.home-assistant.io/docs/blueprint/tutorial/
+
+blueprint:
+  name: Door lock automation with multiple inputs
+  description: Control a door lock based on lock state, closed state and motion
+  domain: automation
+  min_version: 2024.6
+  input:
+    lock_entity:
+      name: Door lock
+      description: The door to control
+      selector:
+        entity:
+          filter:
+            domain: lock
+          multiple: false
+    sensor_entity:
+      name: Door sensor state
+      description: The contact sensor to determine if the door is open or closed
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+          multiple: false
+    timer entity:
+      name: Control timer
+      description: Time to wait for all events to have stopped before locking.
+      default: ""
+      selector:
+        entity:
+          filter:
+            domain: timer
+          multiple: false
+    timer default:
+      name: Wait time
+      description: Time to leave the light on after last motion is detected.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+
+variables:
+  lock_entity: !input lock_entity
+  sensor_entity: !input sensor_entity
+  timer entity: !input timer entity
+  timer default: !input timer default
+
+trigger:
+  - platform: device
+    alias: Door opened
+    type: opened
+    event_data:
+      entity_id: !input lock_entity
+    id: door opened
+  - platform: device
+    alias: Door closed
+    type: closed
+    entity_id: !input lock_entity
+    id: door closed
+  - platform: device
+    alias: Door unlocked
+    entity_id: !input sensor_entity
+    type: unlocked
+    id: door unlocked
+  - alias: Door locked
+    entity_id: !input sensor_entity
+    type: locked
+    id: door locked
+    platform: device
+  - alias: Timer changed
+    entity_id: !input timer entity
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+    id: timer changed
+    platform: device
+
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - door opened
+        sequence:
+          - alias: Cancel timer
+            service: timer.cancel
+            data: {}
+            target:
+              entity_id: timer entity
+      - conditions:
+          - condition: trigger
+            id:
+              - door closed
+        sequence:
+          - alias: Start timer
+            service: timer.start
+            metadata: {}
+            data:
+              duration: timer default
+            target:
+              entity_id: timer entity
+      - conditions:
+          - condition: trigger
+            id:
+              - door locked
+        sequence:
+          - alias: Cancel timer if door is closed and locked
+            if:
+              - alias: Verify door is locked and closed
+                condition: and
+                conditions:
+                  - alias: Verify door is closed
+                    type: is_not_open
+                    condition: device
+                    entity_id: sensor_entity
+                  - alias: Verify door is locked
+                    condition: device
+                    entity_id: lock_entity
+                    type: is_locked
+            then:
+              - alias: Cancel timer
+                service: timer.cancel
+                data: {}
+                target:
+                  entity_id: timer entity
+      - conditions:
+          - condition: trigger
+            id:
+              - door unlocked
+        sequence:
+          - alias: Start timer if door is closed
+            if:
+              - alias: Door is closed
+                type: is_not_open
+                condition: device
+                entity_id: sensor_entity
+            then:
+              - alias: Start timer
+                service: timer.start
+                data:
+                  duration: timer default
+                target:
+                  entity_id: timer entity
+      - conditions:
+          - condition: trigger
+            id:
+              - timer changed
+        sequence:
+          - alias: >-
+              Lock the door if the door is closed and unlocked, and timer
+              finished
+            if:
+              - alias: Verify door is unlocked and closed, and timer is idle
+                condition: and
+                conditions:
+                  - alias: Verify lock is unlocked
+                    condition: device
+                    entity_id: !input lock_entity
+                    type: is_unlocked
+                  - alias: Verify door is closed
+                    type: is_not_open
+                    condition: device
+                    entity_id: !input lock_entity
+                  - alias: Verify timer is idle
+                    condition: state
+                    entity_id: !input timer entity
+                    state: idle
+            then:
+              - alias: Lock the door
+                service: lock.lock
+                data: {}
+                target:
+                  entity_id: !input lock_entity
+mode: single
