@@ -155,14 +155,14 @@ action:
       #         title: Timer default changed
       #         message: Timer default changed
 
-      # - conditions:
-      #     - condition: trigger
-      #       id:
-      #         - timer changed
-      #   sequence:
-      #     - action: notify.persistent_notification
-      #       data:
-      #         message: Timer changed
+      - conditions:
+          - condition: trigger
+            id:
+              - timer changed
+        sequence:
+          - action: notify.persistent_notification
+            data:
+              message: Timer changed
 #         sequence:
 #           - alias: >-
 #               Lock the door if the door is closed and unlocked, and timer
