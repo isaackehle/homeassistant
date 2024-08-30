@@ -1,187 +1,219 @@
 # https://www.home-assistant.io/docs/blueprint/tutorial/
-
 blueprint:
   name: Door lock automation with multiple inputs
   description: Control a door lock based on lock state, closed state and motion
   domain: automation
-  homeassistant:
-    min_version: '2022.6.0'
+  # homeassistant:
+  #   min_version: "2024.6.0"
   input:
-    lock_entity:
+    door_lock:
       name: Door lock
       description: The door to control
       selector:
         entity:
           filter:
             domain: lock
-          multiple: false
-    sensor_entity:
+    door_sensor:
       name: Door sensor state
       description: The contact sensor to determine if the door is open or closed
       selector:
         entity:
           filter:
             domain: binary_sensor
-          multiple: false
-    timer_entity:
+    control_timer:
       name: Control timer
       description: Time to wait for all events to have stopped before locking.
-      default: ""
       selector:
         entity:
           filter:
             domain: timer
-          multiple: false
     timer_default:
       name: Wait time
       description: Time to leave the light on after last motion is detected.
-      default: 120
+      default: 900
       selector:
         number:
           min: 0
           max: 3600
           unit_of_measurement: seconds
-
-domain: automation
+    passage_mode:
+      name: Enable passage mode
+      description: Allow for the automation to be disabled.
+      default: 0
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
 
 variables:
-  lock_entity: !input lock_entity
-  sensor_entity: !input sensor_entity
-  timer_entity: !input timer_entity
+  door_lock: !input door_lock
+  door_sensor: !input door_sensor
+  control_timer: !input control_timer
   timer_default: !input timer_default
+  passage_mode: !input passage_mode
 
 trigger:
-  - platform: device
-    alias: Door opened
-    type: opened
-    event_data:
-      entity_id: !input lock_entity
-    id: door opened
-  - platform: device
-    alias: Door closed
-    type: closed
-    event_data:
-      entity_id: !input lock_entity
-    id: door closed
-  - platform: device
+  - platform: state
+    entity_id: !input door_lock
     alias: Door unlocked
-    event_data:
-      entity_id: !input sensor_entity
-    type: unlocked
     id: door unlocked
-  - alias: Door locked
-    event_data:
-      entity_id: !input sensor_entity
-    type: locked
+    to: "unlocked"
+  - platform: state
+    alias: Door locked
     id: door locked
-    platform: device
-  - alias: Timer changed
-    event_data:
-      entity_id: !input timer_entity
+    to: "locked"
+    entity_id: !input door_lock
+  - platform: state
+    alias: Door opened
+    id: door opened
+    entity_id: !input door_sensor
+    to: "open"
+  - platform: state
+    alias: Door closed
+    id: door closed
+    entity_id: !input door_sensor
+    to: "not_opened"
+
+  - platform: state
+    alias: Timer changed
+    id: timer changed
     for:
       hours: 0
       minutes: 0
       seconds: 0
-    id: timer changed
-    platform: device
+    entity_id: !input control_timer
+  - platform: state
+    alias: Passage mode changed
+    id: passage mode changed
+    entity_id: !input passage_mode
 
-condition: []
 action:
   - choose:
       - conditions:
           - condition: trigger
             id:
-              - door opened
-        sequence:
-          - alias: Cancel timer
-            service: timer.cancel
-            data: {}
-            entity_id: !input timer_entity
-      - conditions:
-          - condition: trigger
-            id:
-              - door closed
-        sequence:
-          - alias: Start timer
-            service: timer.start
-            metadata: {}
-            data:
-              duration: timer_default
-            entity_id: !input timer_entity
-      - conditions:
-          - condition: trigger
-            id:
               - door locked
         sequence:
-          - alias: Cancel timer if door is closed and locked
-            if:
-              - alias: Verify door is locked and closed
-                condition: and
-                conditions:
-                  - alias: Verify door is closed
-                    type: is_not_open
-                    condition: device
-                    domain: binary_sensor
-                    device_id: !input sensor_entity
-                  - alias: Verify door is locked
-                    condition: device
-                    domain: lock
-                    device_id: !input lock_entity
-                    type: is_locked
-            then:
-              - alias: Cancel timer
-                service: timer.cancel
-                data: {}
-                entity_id: !input timer_entity
+          - service: logbook.log
+            data:
+              name: "State change"
+              message: "Door locked"
+
+          # - alias: Cancel timer if door is closed and locked
+          #   if:
+          #     - alias: Verify door is locked and closed
+          #       condition: and
+          #       conditions:
+          #         # - alias: Verify door is closed
+          #         #   type: is_not_open
+          #         #   condition: device
+          #         #   domain: binary_sensor
+          #         #   device_id: !input door_sensor
+          #         - alias: Verify door is locked
+          #           type: is_locked
+          #           condition: device
+          #           domain: lock
+          #           device_id: !input door_lock
+          #   then:
+          #     - alias: Cancel timer
+          #       service: timer.cancel
+          #       target:
+          #         entity_id: !input control_timer
+
       - conditions:
           - condition: trigger
             id:
               - door unlocked
         sequence:
-          - alias: Start timer if door is closed
-            if:
-              - alias: Door is closed
-                type: is_not_open
-                condition: device
-                domain: binary_sensor
-                device_id: !input sensor_entity
-            then:
-              - alias: Start timer
-                service: timer.start
-                domain: timer
-                data:
-                  duration: timer_default
-                device_id: !input timer_entity
-      - conditions:
-          - condition: trigger
-            id:
-              - timer changed
-        sequence:
-          - alias: >-
-              Lock the door if the door is closed and unlocked, and timer
-              finished
-            if:
-              - alias: Verify door is unlocked and closed, and timer is idle
-                condition: and
-                conditions:
-                  - alias: Verify lock is unlocked
-                    condition: device
-                    domain: lock
-                    device_id: !input lock_entity
-                    type: is_unlocked
-                  - alias: Verify door is closed
-                    domain: binary_sensor
-                    type: is_not_open
-                    condition: device
-                    device_id: !input lock_entity
-                  - alias: Verify timer is idle
-                    domain: timer
-                    condition: device
-                    device_id: !input timer_entity
-                    state: idle
-            then:
-              - alias: Lock the door
-                service: lock.lock
-                data: {}
-                entity_id: !input lock_entity
-mode: single
+          - service: logbook.log
+            data:
+              name: "State change"
+              message: "Door unlocked"
+
+          # - alias: Start timer if door is closed
+          #   if:
+          # - alias: Door is closed
+          #   type: is_not_open
+          #   condition: device
+          #   domain: binary_sensor
+          #   device_id: !input door_sensor
+          # then:
+          # - alias: Start timer
+          #   service: timer.start
+          #   data:
+          #     duration: timer_default
+          #   target:
+          #     device_id: !input control_timer
+
+      # - conditions:
+      #     - condition: trigger
+      #       id:
+      #         - timer default changed
+      #   sequence:
+      #     - action: notify.persistent_notification
+      #       data:
+      #         title: Timer default changed
+      #         message: Timer default changed
+
+      # - conditions:
+      #     - condition: trigger
+      #       id:
+      #         - timer changed
+      #   sequence:
+      #     - action: notify.persistent_notification
+      #       data:
+      #         message: Timer changed
+#         sequence:
+#           - alias: >-
+#               Lock the door if the door is closed and unlocked, and timer
+#               finished
+#             if:
+#               - alias: Verify door is unlocked and closed, and timer is idle
+#                 condition: and
+#                 conditions:
+#                   - alias: Verify lock is unlocked
+#                     condition: device
+#                     type: is_unlocked
+#                     domain: lock
+#                     device_id: !input door_lock
+#                   # - alias: Verify door is closed
+#                   #   domain: binary_sensor
+#                   #   condition: device
+#                   #   type: is_not_open
+#                   #   device_id: !input door_lock
+#                   # - alias: Verify timer is idle
+#                   #   domain: timer
+#                   #   condition: device
+#                   #   state: idle
+#                   #   device_id: !input control_timer
+#             then:
+#               - alias: Lock the door
+#                 service: lock.lock
+#                 target:
+#                   entity_id: !input door_lock
+# # data['action'][0]['choose'][3]['sequence'][0]['then'][0]['domain']. Got 'timer'.
+# - conditions:
+#     - condition: trigger
+#       id:
+#         - door opened
+#   sequence:
+#     - alias: Cancel timer
+#       service: timer.cancel
+#       target:
+#         entity_id: !input control_timer
+
+# - conditions:
+#     - condition: trigger
+#       id:
+#         - door closed
+#   sequence:
+#     - alias: Start timer
+#       service: timer.start
+#       data:
+#         duration: timer_default
+#       target:
+#         entity_id: !input control_timer
+
+# - action: notify.persistent_notification
+#   data:
+#     message: "Door locked"
