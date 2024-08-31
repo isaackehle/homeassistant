@@ -1,4 +1,8 @@
 # https://www.home-assistant.io/docs/blueprint/tutorial/
+
+# https://developers.home-assistant.io/
+# https://developers.home-assistant.io/docs/development_environment
+
 blueprint:
   name: Door lock automation with multiple inputs
   description: Control a door lock based on lock state, closed state and motion
@@ -73,7 +77,6 @@ trigger:
     id: door closed
     entity_id: !input door_sensor
     to: "not_opened"
-
   - platform: state
     alias: Timer changed
     id: timer changed
@@ -99,26 +102,39 @@ action:
               name: "State change"
               message: "Door locked"
 
+          - alias: Cancel timer
+            data: {}
+            # service: timer.cancel
+            action: timer.cancel
+            target:
+              entity_id: !input control_timer
+
           # - alias: Cancel timer if door is closed and locked
           #   if:
           #     - alias: Verify door is locked and closed
           #       condition: and
           #       conditions:
-          #         # - alias: Verify door is closed
-          #         #   type: is_not_open
-          #         #   condition: device
-          #         #   domain: binary_sensor
-          #         #   device_id: !input door_sensor
+          #         - alias: Verify door is closed
+          #           type: closed
+          #           condition: device
+          #           domain: binary_sensor
+          #           device_id: !input door_sensor
           #         - alias: Verify door is locked
-          #           type: is_locked
           #           condition: device
           #           domain: lock
           #           device_id: !input door_lock
+          #           type: is_locked
           #   then:
-          #     - alias: Cancel timer
-          #       service: timer.cancel
-          #       target:
-          #         entity_id: !input control_timer
+          #     - service: logbook.log
+          #       data:
+          #         name: "Timer can be canceled"
+          #         message: "Timer can be canceled so it was"
+          #     # - alias: Cancel timer
+          #     #   data: {}
+          #     #   # service: timer.cancel
+          #     #   action: timer.cancel
+          #     #   target:
+          #     #     entity_id: !input control_timer
 
       - conditions:
           - condition: trigger
@@ -132,18 +148,18 @@ action:
 
           # - alias: Start timer if door is closed
           #   if:
-          # - alias: Door is closed
-          #   type: is_not_open
-          #   condition: device
-          #   domain: binary_sensor
-          #   device_id: !input door_sensor
-          # then:
-          # - alias: Start timer
-          #   service: timer.start
-          #   data:
-          #     duration: timer_default
-          #   target:
-          #     device_id: !input control_timer
+          #     - alias: Door is closed
+          #       type: is_not_open
+          #       condition: device
+          #       domain: binary_sensor
+          #       device_id: !input door_sensor
+          #   then:
+          #     - alias: Start timer
+          #       service: timer.start
+          #       data:
+          #         duration: timer_default
+          #       target:
+          #         device_id: !input control_timer
 
       # - conditions:
       #     - condition: trigger
@@ -188,7 +204,7 @@ action:
 #                   #   device_id: !input control_timer
 #             then:
 #               - alias: Lock the door
-#                 service: lock.lock
+#               a  service: lock.lock
 #                 target:
 #                   entity_id: !input door_lock
 # # data['action'][0]['choose'][3]['sequence'][0]['then'][0]['domain']. Got 'timer'.
