@@ -1,0 +1,11 @@
+{
+  "name": "homeassistant",
+  "packageManager": "yarn@3.5.0",
+  "dependencies": {
+    "prettier": "^3.3.3",
+    "prettier-plugin-properties": "^0.3.0",
+    "prettier-plugin-sh": "^0.14.0",
+    "prettier-plugin-toml": "^2.0.1",
+    "prettier-plugin-xml": "^0.1.0"
+  }
+}
