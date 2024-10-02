@@ -1,0 +1,59 @@
+alias: testing
+description: ""
+trigger:
+  - alias: Door became open
+    platform: state
+    entity_id:
+      - binary_sensor.dining_room_door_position
+    id: door_opened
+    to: "on"
+  - alias: Door no longer open
+    platform: state
+    entity_id:
+      - binary_sensor.dining_room_door_position
+    id: door_not_open
+    to: "off"
+  - alias: Door became locked
+    platform: state
+    entity_id:
+      - lock.dining_room_door
+    id: door_locked
+    to: locked
+  - alias: Door became locked
+    platform: state
+    entity_id:
+      - lock.dining_room_door
+    id: door_unlocked
+    to: unlocked
+  - platform: state
+    entity_id:
+      - input_boolean.lock_override
+    alias: Passage mode changed
+    id: passage_mode_changed
+  - alias: Timer changed state
+    platform: state
+    entity_id:
+      - timer.dining_room_door
+    id: timer_changed_state
+condition: []
+action:
+  - alias: lock state
+    if:
+      - condition: state
+        entity_id: lock.dining_room_door
+        state: locked
+    then:
+      - if:
+          - condition: state
+            entity_id: binary_sensor.dining_room_door_position
+            state: "on"
+            alias: door is open
+        then: []
+    else:
+      - if:
+          - condition: state
+            entity_id: binary_sensor.dining_room_door_position
+            state: "on"
+            alias: door is open
+        then: []
+mode: single
