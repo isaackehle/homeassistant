@@ -1,0 +1,165 @@
+alias: door lock test
+description: ""
+triggers:
+  - alias: Door opened
+    entity_id:
+      - binary_sensor.dining_room_door_position
+    id: door_opened
+    to: "on"
+    trigger: state
+  - alias: Door closed
+    entity_id:
+      - binary_sensor.dining_room_door_position
+    id: door_closed
+    to: "off"
+    trigger: state
+  - alias: Door unlocked
+    entity_id:
+      - lock.dining_room_door
+    id: door_unlocked
+    to: unlocked
+    trigger: state
+  - alias: Door locked
+    entity_id:
+      - lock.dining_room_door
+    id: door_locked
+    to: locked
+    trigger: state
+  - entity_id:
+      - input_boolean.lock_override
+    alias: Passage mode changed
+    id: passage_mode_changed
+    trigger: state
+  - alias: Timer went idle
+    entity_id:
+      - timer.dining_room_door
+    id: timer_idle
+    trigger: state
+    to: idle
+conditions: []
+actions:
+  - alias: lock state
+    if:
+      - condition: state
+        entity_id: lock.dining_room_door
+        state: locked
+        alias: Confirm the door is locked
+    then:
+      - alias: Door is locked
+        if:
+          - condition: state
+            entity_id: binary_sensor.dining_room_door_position
+            state: "on"
+            alias: Confirm the door is open
+        then:
+          - alias: Door is open and locked
+            choose:
+              - conditions:
+                  - condition: state
+                    entity_id: timer.dining_room_door
+                    state: active
+                    alias: Is the timer active
+                sequence:
+                  - action: timer.cancel
+                    metadata: {}
+                    data: {}
+                    target:
+                      entity_id: timer.dining_room_door
+                    alias: Cancel the timer
+                    enabled: true
+                alias: Cancel the timer if it is running
+        else:
+          - alias: Door is closed and locked
+            choose:
+              - conditions:
+                  - condition: state
+                    entity_id: timer.dining_room_door
+                    state: active
+                    alias: Is the timer active
+                sequence:
+                  - action: timer.cancel
+                    metadata: {}
+                    data: {}
+                    target:
+                      entity_id: timer.dining_room_door
+                    alias: Cancel the timer
+                    enabled: true
+                alias: Cancel the timer if it is running
+    else:
+      - alias: Door is unlocked
+        if:
+          - condition: state
+            entity_id: binary_sensor.dining_room_door_position
+            state: "on"
+            alias: Confirm the door is open
+        then:
+          - alias: Door is open and unlocked
+            if:
+              - condition: state
+                entity_id: timer.dining_room_door
+                state: active
+                alias: Is the timer active
+            then:
+              - action: logbook.log
+                metadata: {}
+                data:
+                  name: automation.door_lock_test
+                  message: door is unlocked and open
+                  domain: automation
+              - action: timer.cancel
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: timer.dining_room_door
+                alias: Cancel the timer
+                enabled: true
+        else:
+          - alias: Door is closed and unlocked
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - door_closed
+                          - door_unlocked
+                    sequence:
+                      - action: logbook.log
+                        metadata: {}
+                        data:
+                          name: automation.door_lock_test
+                          message: door is closed and unlocked, so resetting the timer
+                          domain: automation
+                      - alias: Reset the timer
+                        action: timer.set_duration
+                        target:
+                          entity_id: timer.dining_room_door
+                        data:
+                          duration: "00:05:00"
+                      - action: timer.start
+                        metadata: {}
+                        data: {}
+                        target:
+                          entity_id: timer.dining_room_door
+                        alias: Start the timer
+                    alias: Reset the timer for a door state change
+                  - conditions:
+                      - condition: trigger
+                        id:
+                          - timer_idle
+                    sequence:
+                      - action: logbook.log
+                        metadata: {}
+                        data:
+                          name: automation.door_lock_test
+                          message: >-
+                            door is closed and unlocked, and timer changed to
+                            idle, so locking
+                          domain: automation
+                      - action: lock.lock
+                        metadata: {}
+                        data: {}
+                        target:
+                          entity_id: lock.dining_room_door
+                        alias: Lock the lock
+                    alias: Lock the door when triggered by the timer
+mode: single
