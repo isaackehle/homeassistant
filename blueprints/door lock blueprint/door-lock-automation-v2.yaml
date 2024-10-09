@@ -1,17 +1,17 @@
 alias: door lock test
-description: ""
+description: ''
 triggers:
   - alias: Door opened
     entity_id:
       - binary_sensor.dining_room_door_position
     id: door_opened
-    to: "on"
+    to: 'on'
     trigger: state
   - alias: Door closed
     entity_id:
       - binary_sensor.dining_room_door_position
     id: door_closed
-    to: "off"
+    to: 'off'
     trigger: state
   - alias: Door unlocked
     entity_id:
@@ -49,7 +49,7 @@ actions:
         if:
           - condition: state
             entity_id: binary_sensor.dining_room_door_position
-            state: "on"
+            state: 'on'
             alias: Confirm the door is open
         then:
           - alias: Door is open and locked
@@ -90,7 +90,7 @@ actions:
         if:
           - condition: state
             entity_id: binary_sensor.dining_room_door_position
-            state: "on"
+            state: 'on'
             alias: Confirm the door is open
         then:
           - alias: Door is open and unlocked
@@ -134,7 +134,7 @@ actions:
                         target:
                           entity_id: timer.dining_room_door
                         data:
-                          duration: "00:05:00"
+                          duration: '00:05:00'
                       - action: timer.start
                         metadata: {}
                         data: {}
