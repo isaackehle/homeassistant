@@ -21,9 +21,9 @@
 | ---------- | ------------- | ----------- | ------------ | ------------------ | ------------- |
 | **Locked** | Closed        | Idle        | X            |                    |               |
 | **Locked** | Closed        | Active      | X            |                    | Timer -> Idle |
-| Locked     | **Closed**    | X           | X            | Alert?             | Timer -> Idle |
 | Locked     | Closed        | **Idle**    | X            | Target final state |               |
 | Locked     | Closed        | **Active**  | X            | Stop timer         | Timer -> Idle |
+| Locked     | **Closed**    | X           | X            | Alert?             | Timer -> Idle |
 
 | Lock state | Door position | Timer state | Passage Mode | Description | Action(s)         |
 | ---------- | ------------- | ----------- | ------------ | ----------- | ----------------- |
