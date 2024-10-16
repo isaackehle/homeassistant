@@ -1,0 +1,16 @@
+{
+  "20": "ON/OFF",
+  "21": "Mode",
+  "22": "Brightness",
+  "23": "Color Temp",
+  "24": "Color ",
+  "25": "Scene",
+  "26": "Timer",
+  "28": "Adjust",
+  "29": "Debug",
+  "101": "情景数量 (Number of stories)",
+  "102": "场景数据重置 (Scene data reset)",
+  "103": "LED数量 (Number of LEDs)",
+  "104": "场景index (Scene index)",
+  "105": "追踪上报信息 (Track escalated information)"
+}
