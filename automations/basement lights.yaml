@@ -57,7 +57,7 @@ actions:
           {% if from_state == "idle" and to_state == 'active' %}
             timer started
           {% elif from_state == "active" and to_state == 'idle' %}
-            timer started
+            timer stopped
           {% else %}
             'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
           {% endif %}
@@ -80,10 +80,7 @@ actions:
         {% else %}
           'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
         {% endif %}
-      should_turn_on_lights: >-
-        {{ action_type in ['top paddle single', 'top paddle double', 'door
-        opened', 'motion detected'] }}
-      should_turn_off_lights: "{{ action_type in ['bottom paddle single', 'bottom paddle double'] }}"
+      timer_stopped: "{{ action_type in ['timer stopped'] }}"
       motion_sensors:
         - binary_sensor.basement_southeast_sensor_occupancy
         - binary_sensor.basement_cam_motion_detected
@@ -91,100 +88,6 @@ actions:
         - binary_sensor.basement_sink_sensor_presence
     alias: Define vars
   - choose:
-      - conditions:
-          - alias: MBR focus
-            condition: template
-            value_template: "{{ event_source_class == 'switch' }}"
-        sequence:
-          - action: timer.start
-            metadata: {}
-            data:
-              duration: '00:20:00'
-            target:
-              entity_id: timer.basement_motion_timer
-            alias: Start timer
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_on
-            alias: Lights on
-          - alias: Rope lights white
-            action: scene.turn_on
-            target:
-              entity_id: scene.basement_rope_lights_103_color_white
-            data: {}
-        alias: top single
-      - conditions:
-          - condition: trigger
-            id:
-              - bottom single
-        sequence:
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_off
-            alias: Lights off
-          - action: timer.cancel
-            metadata: {}
-            data: {}
-            target:
-              entity_id: timer.basement_motion_timer
-            alias: Cancel timer
-          - alias: Rope lights off
-            action: scene.turn_on
-            target:
-              entity_id: scene.basement_rope_lights_199_off
-            data: {}
-        alias: bottom single
-      - conditions:
-          - condition: trigger
-            id:
-              - top double
-        sequence:
-          - alias: Bypass on
-            target:
-              entity_id:
-                - input_boolean.basement_presence_bypass
-            data: {}
-            action: input_boolean.turn_on
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_on
-            alias: Lights on
-          - alias: Rope lights white
-            action: scene.turn_on
-            target:
-              entity_id: scene.basement_rope_lights_103_color_white
-            data: {}
-          - action: timer.cancel
-            metadata: {}
-            data: {}
-            target:
-              entity_id: timer.basement_motion_timer
-            alias: Cancel timer
-        alias: top double
-      - conditions:
-          - condition: trigger
-            id:
-              - bottom double
-        sequence:
-          - alias: Bypass off
-            data: {}
-            target:
-              entity_id: input_boolean.basement_presence_bypass
-            action: input_boolean.turn_off
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_off
-            alias: Lights off
-          - action: scene.turn_on
-            target:
-              entity_id: scene.basement_rope_lights_199_off
-            data: {}
-            alias: Rope lights off
-        alias: bottom double
       - conditions:
           - condition: trigger
             id:
@@ -225,4 +128,72 @@ actions:
                   entity_id: scene.basement_rope_lights_199_off
                 data: {}
         alias: Timer changed
+  - parallel:
+      - alias: Turn lights on?
+        sequence:
+          - alias: Are lights turning on?
+            condition: template
+            value_template: >
+              {{ action_type in ['top paddle single', 'top paddle double', 'door
+              opened', 'motion detected'] }}
+          - action: timer.start
+            metadata: {}
+            data:
+              duration: '00:20:00'
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Start timer
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_on
+            alias: Lights on
+          - alias: Rope lights white
+            action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_103_color_white
+            data: {}
+      - alias: Turn off lights immediately?
+        sequence:
+          - alias: Turn off lights immediately?
+            condition: template
+            value_template: >-
+              {{ action_type in ['bottom paddle single', 'bottom paddle double']
+              }}
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_off
+            alias: Lights off
+          - alias: Rope lights off
+            action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_199_off
+            data: {}
+          - action: timer.cancel
+            metadata: {}
+            data: {}
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Cancel timer
+      - alias: Override on?
+        sequence:
+          - condition: template
+            value_template: "{{ action_type in ['top paddle double'] }}"
+          - alias: Bypass on
+            target:
+              entity_id:
+                - input_boolean.basement_presence_bypass
+            data: {}
+            action: input_boolean.turn_on
+      - alias: Override off?
+        sequence:
+          - condition: template
+            value_template: "{{ action_type in ['bottom paddle double'] }}"
+          - alias: Bypass off
+            target:
+              entity_id:
+                - input_boolean.basement_presence_bypass
+            data: {}
+            action: input_boolean.turn_off
 mode: single
