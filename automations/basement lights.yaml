@@ -1,0 +1,228 @@
+alias: Basement lights controller
+description: ''
+triggers:
+  - alias: When a monitored device did something
+    trigger: state
+    entity_id:
+      - event.basement_kink_corner_switch_scene_001
+      - event.basement_kink_corner_switch_scene_002
+      - event.basement_exterior_switch_scene_001
+      - event.basement_exterior_switch_scene_002
+      - event.basement_stairs_switch_scene_001
+      - event.basement_stairs_switch_scene_002
+      - binary_sensor.basement_southeast_sensor_occupancy
+      - binary_sensor.basement_cam_motion_detected
+      - binary_sensor.basement_stair_sensor_occupancy
+      - binary_sensor.basement_sink_sensor_presence
+      - binary_sensor.basement_door_position
+      - binary_sensor.basement_stair_door_position
+      - timer.basement_motion_timer
+    to: null
+conditions: []
+actions:
+  - variables:
+      event_type: '{{ trigger.to_state.attributes.event_type }}'
+      entity_id: '{{ trigger.to_state.entity_id }}'
+      from_state: '{{ trigger.from_state.state }}'
+      to_state: '{{ trigger.to_state.state }}'
+      was_top_paddle: "{{ entity_id.endswith('scene_001') }}"
+      was_bottom_paddle: "{{ entity_id.endswith('scene_002') }}"
+      event_source_class: >
+        {% if 'switch' in entity_id %}
+          switch
+        {% elif 'timer' in entity_id %}
+          timer
+        {% elif 'position' in entity_id %}
+          door
+        {% elif 'occupancy' in entity_id or 'motion_detected' in entity_id or
+        'presence' in entity_id %}
+          motion
+        {% else %}
+          unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+        {% endif %}
+      action_type: |
+        {% if event_source_class == 'switch' %}
+          {% if was_top_paddle == True and event_type == 'KeyPressed' %}
+            top paddle single
+          {% elif was_top_paddle == True and event_type == 'KeyPressed2x' %}
+            top paddle double
+          {% elif was_bottom_paddle == True and event_type == 'KeyPressed' %}
+            bottom paddle single
+          {% elif was_bottom_paddle == True and event_type == 'KeyPressed2x' %}
+            bottom paddle double
+          {% else %}
+            'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+          {% endif %}
+        {% elif event_source_class == 'timer' %}
+          {% if from_state == "idle" and to_state == 'active' %}
+            timer started
+          {% elif from_state == "active" and to_state == 'idle' %}
+            timer started
+          {% else %}
+            'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+          {% endif %}
+        {% elif event_source_class == 'door' %}
+          {% if from_state == "off" and to_state == 'on' %}
+            door opened
+          {% elif from_state == "on" and to_state == 'off' %}
+            door closed
+          {% else %}
+            'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+          {% endif %}
+        {% elif event_source_class == 'motion' %}
+          {% if from_state == "off" and to_state == 'on' %}
+            motion detected
+          {% elif from_state == "on" and to_state == 'off' %}
+            motion cleared
+          {% else %}
+            'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+          {% endif %}
+        {% else %}
+          'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
+        {% endif %}
+      should_turn_on_lights: >-
+        {{ action_type in ['top paddle single', 'top paddle double', 'door
+        opened', 'motion detected'] }}
+      should_turn_off_lights: "{{ action_type in ['bottom paddle single', 'bottom paddle double'] }}"
+      motion_sensors:
+        - binary_sensor.basement_southeast_sensor_occupancy
+        - binary_sensor.basement_cam_motion_detected
+        - binary_sensor.basement_stair_sensor_occupancy
+        - binary_sensor.basement_sink_sensor_presence
+    alias: Define vars
+  - choose:
+      - conditions:
+          - alias: MBR focus
+            condition: template
+            value_template: "{{ event_source_class == 'switch' }}"
+        sequence:
+          - action: timer.start
+            metadata: {}
+            data:
+              duration: '00:20:00'
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Start timer
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_on
+            alias: Lights on
+          - alias: Rope lights white
+            action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_103_color_white
+            data: {}
+        alias: top single
+      - conditions:
+          - condition: trigger
+            id:
+              - bottom single
+        sequence:
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_off
+            alias: Lights off
+          - action: timer.cancel
+            metadata: {}
+            data: {}
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Cancel timer
+          - alias: Rope lights off
+            action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_199_off
+            data: {}
+        alias: bottom single
+      - conditions:
+          - condition: trigger
+            id:
+              - top double
+        sequence:
+          - alias: Bypass on
+            target:
+              entity_id:
+                - input_boolean.basement_presence_bypass
+            data: {}
+            action: input_boolean.turn_on
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_on
+            alias: Lights on
+          - alias: Rope lights white
+            action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_103_color_white
+            data: {}
+          - action: timer.cancel
+            metadata: {}
+            data: {}
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Cancel timer
+        alias: top double
+      - conditions:
+          - condition: trigger
+            id:
+              - bottom double
+        sequence:
+          - alias: Bypass off
+            data: {}
+            target:
+              entity_id: input_boolean.basement_presence_bypass
+            action: input_boolean.turn_off
+          - action: scene.turn_on
+            metadata: {}
+            target:
+              entity_id: scene.basement_presence_off
+            alias: Lights off
+          - action: scene.turn_on
+            target:
+              entity_id: scene.basement_rope_lights_199_off
+            data: {}
+            alias: Rope lights off
+        alias: bottom double
+      - conditions:
+          - condition: trigger
+            id:
+              - sensor cleared motion
+        sequence:
+          - action: timer.start
+            metadata: {}
+            data:
+              duration: '00:20:00'
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Start timer
+        alias: Sensor cleared motion
+      - conditions:
+          - condition: trigger
+            id:
+              - timer changed
+        sequence:
+          - alias: Turn off lights if timer is idle and bypass is not on
+            if:
+              - condition: state
+                entity_id: timer.basement_motion_timer
+                state: idle
+                alias: Is timer idle
+              - condition: state
+                entity_id: input_boolean.basement_presence_bypass
+                state: 'off'
+                alias: Is bypass off
+            then:
+              - action: scene.turn_on
+                metadata: {}
+                target:
+                  entity_id: scene.basement_presence_off
+                alias: Lights off
+              - alias: Rope lights off
+                action: scene.turn_on
+                target:
+                  entity_id: scene.basement_rope_lights_199_off
+                data: {}
+        alias: Timer changed
+mode: single

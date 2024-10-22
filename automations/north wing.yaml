@@ -1,0 +1,326 @@
+alias: North wing light
+description: ''
+triggers:
+  - alias: When a monitored device did something
+    trigger: state
+    entity_id:
+      - event.theater_cabinet_switch_scene_001
+      - event.theater_cabinet_switch_scene_002
+      - event.theater_cabinet_switch_scene_003
+      - event.theater_cabinet_switch_scene_004
+      - event.theater_cabinet_switch_scene_005
+      - event.theater_cabinet_switch_scene_006
+      - event.office_recessed_switch_scene_001
+      - event.office_recessed_switch_scene_002
+      - event.craft_room_recessed_switch_scene_001
+      - event.craft_room_recessed_switch_scene_002
+      - event.theater_recessed_switch_primary_interior_scene_001
+      - event.theater_recessed_switch_primary_interior_scene_002
+      - event.theater_recessed_switch_secondary_exterior_scene_001
+      - event.theater_recessed_switch_secondary_exterior_scene_002
+      - event.garage_outdoor_camera_power_scene_001
+      - event.garage_outdoor_camera_power_scene_002
+      - event.north_flood_lights_scene_001
+      - event.north_flood_lights_scene_002
+    to: null
+conditions: []
+actions:
+  - variables:
+      event_type: '{{ trigger.to_state.attributes.event_type }}'
+      entity_id: '{{ trigger.to_state.entity_id }}'
+      entity_state: '{{ trigger.to_state.state }}'
+      scene: |
+        {% if entity_id.endswith('scene_001') %}
+          001
+        {% elif entity_id.endswith('scene_002') %}
+          002
+        {% elif entity_id.endswith('scene_003') %}
+          003
+        {% elif entity_id.endswith('scene_004') %}
+          004
+        {% elif entity_id.endswith('scene_005') %}
+          005
+        {% else %}
+          unknown - {{ entity_id }} {{ event_type }} {{ entity_state }}'
+        {% endif %}
+      was_scene_switch: "{{ 'theater_cabinet_switch' in entity_id }}"
+      action_type: >
+        {% if was_scene_switch == False and scene == '001' and event_type == 'KeyPressed' %}
+          top paddle single
+        {% elif was_scene_switch == False and scene == '001' and event_type == 'KeyPressed2x' %}
+          top paddle double
+        {% elif was_scene_switch == False and scene == '002' and event_type == 'KeyPressed' %}
+          bottom paddle single
+        {% elif was_scene_switch == False and scene == '002' and event_type == 'KeyPressed2x' %}
+          bottom paddle double
+        {% elif was_scene_switch == True and scene == '001' and event_type == 'KeyPressed' %}
+          button 1 single
+        {% elif was_scene_switch == True and scene == '001' and event_type == 'KeyPressed2x' %}
+          button 1 double
+        {% elif was_scene_switch == True and scene == '002' and event_type == 'KeyPressed' %}
+          button 2 single
+        {% elif was_scene_switch == True and scene == '002' and event_type == 'KeyPressed2x' %}
+          button 2 double
+        {% elif was_scene_switch == True and scene == '003' and event_type == 'KeyPressed' %}
+          button 3 single
+        {% elif was_scene_switch == True and scene == '003' and event_type == 'KeyPressed2x' %}
+          button 3 double
+        {% elif was_scene_switch == True and scene == '004' and event_type == 'KeyPressed' %}
+          button 4 single
+        {% elif was_scene_switch == True and scene == '004' and event_type == 'KeyPressed2x' %}
+          button 4 double
+        {% elif was_scene_switch == True and scene == '005' and event_type == 'KeyPressed' %}
+          button 5 single
+        {% elif was_scene_switch == True and scene == '005' and event_type == 'KeyPressed2x' %}
+          button 5 double
+        {% else %}
+          'unknown - {{ entity_id }} {{ event_type }} {{ entity_state }}'
+        {% endif %}
+      event_source_class: |
+        {% if was_scene_switch == True %}
+          north wing
+        {% elif 'theater_recessed' in entity_id %}
+          north wing
+        {% elif 'garage_outdoor_camera' in entity_id %}
+          north wing
+        {% elif 'garage_outdoor_camera' in entity_id %}
+          north wing
+        {% elif 'craft' in entity_id %}
+          craft
+        {% elif 'office' in entity_id %}
+          office
+        {% elif was_scene_switch and scene == '001' %}
+          blue scene
+        {% elif was_scene_switch and scene == '002' %}
+          red scene
+        {% elif was_scene_switch and scene == '003' %}
+          purple scene
+        {% elif was_scene_switch and scene == '004' %}
+          green scene
+        {% else %}
+          unknown - {{ entity_id }} {{ event_type }} {{ entity_state }}'
+        {% endif %}
+    alias: Define vars
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'north wing' }}"
+            alias: north wing
+        sequence:
+          - alias: Bright or off?
+            choose:
+              - conditions:
+                  - condition: or
+                    conditions:
+                      - condition: template
+                        value_template: "{{ action_type == 'top paddle single' }}"
+                        alias: top paddle single
+                      - condition: template
+                        value_template: "{{ action_type == 'button 5 single' }}"
+                        alias: button 5 single
+                sequence:
+                  - alias: North wing lights to full bright
+                    target:
+                      entity_id:
+                        - light.theater_color_lights
+                        - light.craft_room_recessed_lights
+                        - light.office_desk_lights
+                        - light.office_recessed_lights
+                        - light.theater_door_lamp
+                    data:
+                      kelvin: 6500
+                      brightness_pct: 100
+                    action: light.turn_on
+                  - alias: Theater fan lights to full
+                    target:
+                      entity_id:
+                        - light.theater_fan_north
+                        - light.theater_fan_south
+                        - light.theater_overhead_lights
+                    data:
+                      brightness_pct: 100
+                    action: light.turn_on
+                alias: Bright?
+              - conditions:
+                  - condition: or
+                    conditions:
+                      - alias: bottom paddle single
+                        condition: template
+                        value_template: "{{ action_type == 'double paddle single' }}"
+                      - alias: button 5 double
+                        condition: template
+                        value_template: "{{ action_type == 'button 5 double' }}"
+                sequence:
+                  - alias: North lights off
+                    action: light.turn_off
+                    target:
+                      entity_id:
+                        - light.theater_color_lights
+                        - light.craft_room_recessed_lights
+                        - light.office_desk_lights
+                        - light.office_recessed_lights
+                        - light.craft_room_salt_lamp
+                        - light.theater_fan_north
+                        - light.theater_fan_south
+                        - light.theater_door_lamp
+                        - light.theater_overhead_lights
+                    data: {}
+                alias: Off?
+        alias: North wing
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'office' }}"
+            alias: office
+        sequence:
+          - alias: Warm or off?
+            choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_type == 'top paddle single' }}"
+                    alias: top paddle single
+                sequence:
+                  - alias: Office lights to warm
+                    target:
+                      entity_id:
+                        - light.office_desk_lights
+                        - light.office_recessed_lights
+                    data:
+                      kelvin: 2500
+                      brightness: 255
+                    action: light.turn_on
+                alias: Warm?
+              - conditions:
+                  - alias: bottom paddle single
+                    condition: template
+                    value_template: "{{ action_type == 'double paddle single' }}"
+                sequence:
+                  - alias: Office lights off
+                    action: light.turn_off
+                    target:
+                      entity_id:
+                        - light.office_desk_lights
+                        - light.office_recessed_lights
+                    data: {}
+                alias: Off?
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'craft' }}"
+            alias: craft
+        sequence:
+          - alias: Warm or off?
+            choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_type == 'top paddle single' }}"
+                    alias: top paddle single
+                sequence:
+                  - alias: Craft lights to warm
+                    target:
+                      entity_id:
+                        - light.office_desk_lights
+                        - light.office_recessed_lights
+                    data:
+                      kelvin: 2500
+                      brightness: 255
+                    action: light.turn_on
+                  - type: turn_on
+                    device_id: 266da2d89200ebf1875e871f23cacc8b
+                    entity_id: 8314142767f279b70bc07c917b35a6d5
+                    domain: light
+                    brightness_pct: 100
+                    alias: Craft room salt lamp on
+                alias: Warm?
+              - conditions:
+                  - alias: bottom paddle single
+                    condition: template
+                    value_template: "{{ action_type == 'double paddle single' }}"
+                sequence:
+                  - alias: Craft room lights off
+                    action: light.turn_off
+                    data: {}
+                    target:
+                      entity_id:
+                        - light.craft_room_recessed_lights
+                        - light.craft_room_salt_lamp
+                alias: Off?
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'blue scene' }}"
+            alias: blue scene
+        sequence:
+          - alias: North wing lights to blue
+            target:
+              entity_id:
+                - light.theater_color_lights
+                - light.craft_room_recessed_lights
+                - light.office_desk_lights
+                - light.office_recessed_lights
+                - light.theater_door_lamp
+            data:
+              brightness_pct: 100
+              rgb_color:
+                - 4
+                - 63
+                - 241
+            action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'red scene' }}"
+            alias: red scene
+        sequence:
+          - alias: North wing lights to red
+            target:
+              entity_id:
+                - light.theater_color_lights
+                - light.craft_room_recessed_lights
+                - light.office_desk_lights
+                - light.office_recessed_lights
+                - light.theater_door_lamp
+            data:
+              brightness_pct: 100
+              rgb_color:
+                - 255
+                - 0
+                - 0
+            action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'purple scene' }}"
+            alias: purple scene
+        sequence:
+          - alias: North wing lights to purple
+            target:
+              entity_id:
+                - light.theater_color_lights
+                - light.craft_room_recessed_lights
+                - light.office_desk_lights
+                - light.office_recessed_lights
+                - light.theater_door_lamp
+            data:
+              brightness_pct: 100
+              rgb_color:
+                - 140
+                - 0
+                - 255
+            action: light.turn_on
+      - conditions:
+          - condition: template
+            value_template: "{{ event_source_class == 'green scene' }}"
+            alias: green scene
+        sequence:
+          - alias: North wing lights to green
+            target:
+              entity_id:
+                - light.theater_color_lights
+                - light.craft_room_recessed_lights
+                - light.office_desk_lights
+                - light.office_recessed_lights
+                - light.theater_door_lamp
+            data:
+              brightness_pct: 100
+              rgb_color:
+                - 0
+                - 255
+                - 30
+            action: light.turn_on
+mode: single
