@@ -54,9 +54,9 @@ actions:
             'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
           {% endif %}
         {% elif event_source_class == 'timer' %}
-          {% if from_state == "idle" and to_state == 'active' %}
+          {% if to_state == 'active' %}
             timer started
-          {% elif from_state == "active" and to_state == 'idle' %}
+          {% elif to_state == 'idle' %}
             timer stopped
           {% else %}
             'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
@@ -70,9 +70,9 @@ actions:
             'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
           {% endif %}
         {% elif event_source_class == 'motion' %}
-          {% if from_state == "off" and to_state == 'on' %}
+          {% if to_state == 'on' %}
             motion detected
-          {% elif from_state == "on" and to_state == 'off' %}
+          {% elif to_state == 'off' %}
             motion cleared
           {% else %}
             'unknown - {{ entity_id }} {{ event_type }} {{ from_state }} -> {{ to_state }}'
@@ -88,19 +88,6 @@ actions:
         - binary_sensor.basement_sink_sensor_presence
     alias: Define vars
   - choose:
-      - conditions:
-          - condition: trigger
-            id:
-              - sensor cleared motion
-        sequence:
-          - action: timer.start
-            metadata: {}
-            data:
-              duration: '00:20:00'
-            target:
-              entity_id: timer.basement_motion_timer
-            alias: Start timer
-        alias: Sensor cleared motion
       - conditions:
           - condition: trigger
             id:
@@ -143,15 +130,24 @@ actions:
             target:
               entity_id: timer.basement_motion_timer
             alias: Start timer
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_on
-            alias: Lights on
-          - alias: Rope lights white
+          - alias: Lights on
             action: scene.turn_on
             target:
-              entity_id: scene.basement_rope_lights_103_color_white
+              entity_id:
+                - scene.basement_rope_lights_103_color_white
+                - scene.basement_presence_on
+            data: {}
+      - alias: Timer completed?
+        sequence:
+          - alias: Turn off lights immediately?
+            condition: template
+            value_template: "{{ action_type in ['timer stopped'] }}"
+          - alias: Lights off
+            action: scene.turn_on
+            target:
+              entity_id:
+                - scene.basement_rope_lights_199_off
+                - scene.basement_presence_off
             data: {}
       - alias: Turn off lights immediately?
         sequence:
@@ -160,15 +156,12 @@ actions:
             value_template: >-
               {{ action_type in ['bottom paddle single', 'bottom paddle double']
               }}
-          - action: scene.turn_on
-            metadata: {}
-            target:
-              entity_id: scene.basement_presence_off
-            alias: Lights off
-          - alias: Rope lights off
+          - alias: Lights off
             action: scene.turn_on
             target:
-              entity_id: scene.basement_rope_lights_199_off
+              entity_id:
+                - scene.basement_rope_lights_199_off
+                - scene.basement_presence_off
             data: {}
           - action: timer.cancel
             metadata: {}
@@ -176,6 +169,18 @@ actions:
             target:
               entity_id: timer.basement_motion_timer
             alias: Cancel timer
+      - alias: Sensor motion cleared?
+        sequence:
+          - condition: template
+            value_template: "{{ action_type in ['motion cleared'] }}"
+            alias: Motion cleared?
+          - action: timer.start
+            metadata: {}
+            data:
+              duration: '00:20:00'
+            target:
+              entity_id: timer.basement_motion_timer
+            alias: Start timer
       - alias: Override on?
         sequence:
           - condition: template
