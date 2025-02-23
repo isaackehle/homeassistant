@@ -1,0 +1,1579 @@
+[
+  {
+    "name": "Front porch string light",
+    "id": "eb2233ffddbfe86deezzsa",
+    "key": "PtM*U$q8Al;{3m^0",
+    "mac": "c4:82:e1:5c:65:d4",
+    "uuid": "5355dcb923dc79e3",
+    "category": "dd",
+    "product_name": "smart string light",
+    "product_id": "engdzducywfogftd",
+    "biz_type": 0,
+    "model": "PCB_320P1-V1.0",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1572836370796htGWH/49173dcec221ab8a6c9874114d655ed9.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "21": {
+        "code": "work_mode",
+        "type": "Enum",
+        "values": {
+          "range": ["white", "colour", "scene", "music"]
+        }
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "min": 10,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "24": {
+        "code": "colour_data",
+        "type": "Json",
+        "raw_values": "{\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}",
+        "values": {
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          }
+        }
+      },
+      "26": {
+        "code": "countdown",
+        "type": "Integer",
+        "values": {
+          "unit": "s",
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "27": {
+        "code": "music_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      },
+      "28": {
+        "code": "control_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      }
+    },
+    "ip": "192.168.68.104",
+    "version": "3.3"
+  },
+  {
+    "name": "Basement southwest motion sensor",
+    "id": "eb2475078f6a9a9facabe4",
+    "key": "E_PocJGmbn1#D=$x",
+    "mac": "d8:d6:68:d4:29:2d",
+    "uuid": "f32b4d761eb2bc8c",
+    "sn": "VYCFA12HN00508",
+    "category": "hps",
+    "product_name": "\u5b58\u5728\u4f20\u611f\u5668",
+    "product_id": "6vsyuvrcwrvu3tym",
+    "biz_type": 0,
+    "model": "ld24g",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1620461667609W0o0/11b9de787638959cb4c6ec6970e1edff.png",
+    "mapping": {
+      "1": {
+        "code": "presence_state",
+        "type": "Enum",
+        "values": {
+          "range": ["none", "presence", "peaceful", "small_move", "large_move"]
+        }
+      },
+      "2": {
+        "code": "sensitivity",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 9,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "3": {
+        "code": "near_detection",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 10
+        }
+      },
+      "4": {
+        "code": "far_detection",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 10
+        }
+      },
+      "6": {
+        "code": "checking_result",
+        "type": "Enum",
+        "values": {
+          "range": ["checking", "check_success", "check_failure", "others", "comm_fault", "radar_fault"]
+        }
+      },
+      "9": {
+        "code": "target_dis_closest",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 1
+        }
+      }
+    },
+    "ip": "192.168.68.87",
+    "version": "3.4"
+  },
+  {
+    "name": "Back porch ceiling fan",
+    "id": "eb8548c1bafbdae0ccv7qc",
+    "key": "O-5C1[^y9e;o8K^i",
+    "mac": "a8:80:55:73:29:e5",
+    "uuid": "f8e22731e29576db",
+    "sn": "SMWED01HX00774",
+    "category": "fsd",
+    "product_name": "Ceiling Fan",
+    "product_id": "puj7wgpctcgpn70b",
+    "biz_type": 0,
+    "model": "AC 02",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1664250283502zjU5/ae3f8389c01e5bb3312f5ca6882f6227.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 100,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "60": {
+        "code": "fan_switch",
+        "type": "Boolean",
+        "values": {}
+      },
+      "62": {
+        "code": "fan_speed",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "63": {
+        "code": "fan_direction",
+        "type": "Enum",
+        "values": {
+          "range": ["forward", "reverse"]
+        }
+      },
+      "101": {
+        "code": "fan_countdown_set",
+        "type": "Enum",
+        "values": {
+          "range": ["cancel", "1h", "2h", "4h", "8h"]
+        }
+      }
+    },
+    "ip": "192.168.68.114",
+    "version": "3.4"
+  },
+  {
+    "name": "Sukkah lights 3",
+    "id": "eb95e12c37b72a9a53p7vy",
+    "key": "BnLePj[lZ)*1!3I]",
+    "mac": "7c:f6:66:4a:bb:41",
+    "uuid": "52c5616b142781ba",
+    "category": "dd",
+    "product_name": "smart string light",
+    "product_id": "e2zw3ra5sd3vfx7r",
+    "biz_type": 0,
+    "model": "",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1531122507771gALCb/f13f851d7194ef0baac3cf6efd2f1349.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "21": {
+        "code": "work_mode",
+        "type": "Enum",
+        "values": {
+          "range": ["white", "colour"]
+        }
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "min": 10,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "24": {
+        "code": "colour_data",
+        "type": "Json",
+        "raw_values": "{\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}",
+        "values": {
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          }
+        }
+      },
+      "25": {
+        "code": "scene_data",
+        "type": "Json",
+        "raw_values": "{\"scene_num\":{\"min\":1,\"scale\":0,\"max\":8,\"step\":1},\"scene_units\": {\"unit_change_mode\":{\"range\":[\"static\",\"jump\",\"gradient\"]},\"unit_switch_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"unit_gradient_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"bright\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"temperature\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}}",
+        "values": {
+          "scene_num": {
+            "min": 1,
+            "scale": 0,
+            "max": 8,
+            "step": 1
+          },
+          "scene_units": {
+            "unit_change_mode": {
+              "range": ["static", "jump", "gradient"]
+            },
+            "unit_switch_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "unit_gradient_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "bright": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "temperature": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "h": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 360,
+              "step": 1
+            },
+            "s": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            },
+            "v": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            }
+          }
+        }
+      },
+      "26": {
+        "code": "countdown",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "28": {
+        "code": "control_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      }
+    },
+    "ip": "192.168.68.119",
+    "version": "3.3"
+  },
+  {
+    "name": "Sukkah lights 4",
+    "id": "eb19be54e3c1e4a185vb0c",
+    "key": "~g'E.|dWshYb}_'C",
+    "mac": "7c:f6:66:4a:2e:9b",
+    "uuid": "189e682406fa0a73",
+    "category": "dd",
+    "product_name": "smart string light",
+    "product_id": "e2zw3ra5sd3vfx7r",
+    "biz_type": 0,
+    "model": "",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1531122507771gALCb/f13f851d7194ef0baac3cf6efd2f1349.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "21": {
+        "code": "work_mode",
+        "type": "Enum",
+        "values": {
+          "range": ["white", "colour"]
+        }
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "min": 10,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "24": {
+        "code": "colour_data",
+        "type": "Json",
+        "raw_values": "{\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}",
+        "values": {
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          }
+        }
+      },
+      "25": {
+        "code": "scene_data",
+        "type": "Json",
+        "raw_values": "{\"scene_num\":{\"min\":1,\"scale\":0,\"max\":8,\"step\":1},\"scene_units\": {\"unit_change_mode\":{\"range\":[\"static\",\"jump\",\"gradient\"]},\"unit_switch_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"unit_gradient_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"bright\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"temperature\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}}",
+        "values": {
+          "scene_num": {
+            "min": 1,
+            "scale": 0,
+            "max": 8,
+            "step": 1
+          },
+          "scene_units": {
+            "unit_change_mode": {
+              "range": ["static", "jump", "gradient"]
+            },
+            "unit_switch_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "unit_gradient_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "bright": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "temperature": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "h": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 360,
+              "step": 1
+            },
+            "s": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            },
+            "v": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            }
+          }
+        }
+      },
+      "26": {
+        "code": "countdown",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "28": {
+        "code": "control_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      }
+    },
+    "ip": "192.168.68.118",
+    "version": "3.3"
+  },
+  {
+    "name": "Whoopie room ceiling fan",
+    "id": "eb53ace96c95ce410agoex",
+    "key": ")sv#:ECGn!Lo.6!=",
+    "mac": "50:8b:b9:f0:9d:df",
+    "uuid": "847e372f887b203b",
+    "sn": "FMDEG22TC00A15",
+    "category": "fsd",
+    "product_name": "Ceiling Fan",
+    "product_id": "puj7wgpctcgpn70b",
+    "biz_type": 0,
+    "model": "AC 02",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1664250283502zjU5/ae3f8389c01e5bb3312f5ca6882f6227.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 100,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "60": {
+        "code": "fan_switch",
+        "type": "Boolean",
+        "values": {}
+      },
+      "62": {
+        "code": "fan_speed",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "63": {
+        "code": "fan_direction",
+        "type": "Enum",
+        "values": {
+          "range": ["forward", "reverse"]
+        }
+      },
+      "101": {
+        "code": "fan_countdown_set",
+        "type": "Enum",
+        "values": {
+          "range": ["cancel", "1h", "2h", "4h", "8h"]
+        }
+      }
+    },
+    "ip": "192.168.68.69",
+    "version": "3.4"
+  },
+  {
+    "name": "Sukkah lights 2",
+    "id": "eb49607bdf9c9ad8b3ezwc",
+    "key": "dy[Sx3JSw~P]92&+",
+    "mac": "7c:f6:66:41:76:5a",
+    "uuid": "3608e66a776de302",
+    "category": "dd",
+    "product_name": "smart string light",
+    "product_id": "e2zw3ra5sd3vfx7r",
+    "biz_type": 0,
+    "model": "",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1531122507771gALCb/f13f851d7194ef0baac3cf6efd2f1349.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "21": {
+        "code": "work_mode",
+        "type": "Enum",
+        "values": {
+          "range": ["white", "colour"]
+        }
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "min": 10,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "24": {
+        "code": "colour_data",
+        "type": "Json",
+        "raw_values": "{\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}",
+        "values": {
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          }
+        }
+      },
+      "25": {
+        "code": "scene_data",
+        "type": "Json",
+        "raw_values": "{\"scene_num\":{\"min\":1,\"scale\":0,\"max\":8,\"step\":1},\"scene_units\": {\"unit_change_mode\":{\"range\":[\"static\",\"jump\",\"gradient\"]},\"unit_switch_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"unit_gradient_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"bright\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"temperature\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}}",
+        "values": {
+          "scene_num": {
+            "min": 1,
+            "scale": 0,
+            "max": 8,
+            "step": 1
+          },
+          "scene_units": {
+            "unit_change_mode": {
+              "range": ["static", "jump", "gradient"]
+            },
+            "unit_switch_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "unit_gradient_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "bright": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "temperature": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "h": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 360,
+              "step": 1
+            },
+            "s": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            },
+            "v": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            }
+          }
+        }
+      },
+      "26": {
+        "code": "countdown",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "28": {
+        "code": "control_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      }
+    },
+    "ip": "192.168.68.120",
+    "version": "3.3"
+  },
+  {
+    "name": "Sukkah lights 1",
+    "id": "ebe88c65384db4cb35o0bz",
+    "key": "-jQ8Z&F}Sf-3qA@r",
+    "mac": "7c:f6:66:4a:33:aa",
+    "uuid": "a7ba010623e36379",
+    "category": "dd",
+    "product_name": "smart string light",
+    "product_id": "e2zw3ra5sd3vfx7r",
+    "biz_type": 0,
+    "model": "",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1531122507771gALCb/f13f851d7194ef0baac3cf6efd2f1349.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "21": {
+        "code": "work_mode",
+        "type": "Enum",
+        "values": {
+          "range": ["white", "colour"]
+        }
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "min": 10,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "24": {
+        "code": "colour_data",
+        "type": "Json",
+        "raw_values": "{\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}",
+        "values": {
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          }
+        }
+      },
+      "25": {
+        "code": "scene_data",
+        "type": "Json",
+        "raw_values": "{\"scene_num\":{\"min\":1,\"scale\":0,\"max\":8,\"step\":1},\"scene_units\": {\"unit_change_mode\":{\"range\":[\"static\",\"jump\",\"gradient\"]},\"unit_switch_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"unit_gradient_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"bright\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"temperature\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}}",
+        "values": {
+          "scene_num": {
+            "min": 1,
+            "scale": 0,
+            "max": 8,
+            "step": 1
+          },
+          "scene_units": {
+            "unit_change_mode": {
+              "range": ["static", "jump", "gradient"]
+            },
+            "unit_switch_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "unit_gradient_duration": {
+              "min": 0,
+              "scale": 0,
+              "max": 100,
+              "step": 1
+            },
+            "bright": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "temperature": {
+              "min": 0,
+              "scale": 0,
+              "max": 1000,
+              "step": 1
+            },
+            "h": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 360,
+              "step": 1
+            },
+            "s": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            },
+            "v": {
+              "min": 0,
+              "scale": 0,
+              "unit": "",
+              "max": 1000,
+              "step": 1
+            }
+          }
+        }
+      },
+      "26": {
+        "code": "countdown",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "28": {
+        "code": "control_data",
+        "type": "Json",
+        "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+        "values": {
+          "change_mode": {
+            "range": ["direct", "gradient"]
+          },
+          "bright": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "temperature": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 1000,
+            "step": 1
+          },
+          "h": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 360,
+            "step": 1
+          },
+          "s": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          },
+          "v": {
+            "min": 0,
+            "scale": 0,
+            "unit": "",
+            "max": 255,
+            "step": 1
+          }
+        }
+      }
+    },
+    "ip": "192.168.68.105",
+    "version": "3.3"
+  },
+  {
+    "name": "Theater fan South",
+    "id": "eb904b1eb65e6e041cnxry",
+    "key": "pi0ElN>-nRkIsOXZ",
+    "mac": "a8:80:55:51:9d:37",
+    "uuid": "9837b253d9ebd7eb",
+    "sn": "LZTEC22EZ00B7A",
+    "category": "fsd",
+    "product_name": "Ceiling Fan",
+    "product_id": "puj7wgpctcgpn70b",
+    "biz_type": 0,
+    "model": "AC 02",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1664250283502zjU5/ae3f8389c01e5bb3312f5ca6882f6227.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 100,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "60": {
+        "code": "fan_switch",
+        "type": "Boolean",
+        "values": {}
+      },
+      "62": {
+        "code": "fan_speed",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "63": {
+        "code": "fan_direction",
+        "type": "Enum",
+        "values": {
+          "range": ["forward", "reverse"]
+        }
+      },
+      "101": {
+        "code": "fan_countdown_set",
+        "type": "Enum",
+        "values": {
+          "range": ["cancel", "1h", "2h", "4h", "8h"]
+        }
+      }
+    },
+    "ip": "192.168.68.58",
+    "version": "3.4"
+  },
+  {
+    "name": "Theater fan North",
+    "id": "ebfe7e281f7ac4b32ebcv9",
+    "key": "l8G)7:{*T{mm2O|N",
+    "mac": "a8:80:55:51:9a:30",
+    "uuid": "f2702ad8c74f7ee2",
+    "sn": "LZTEC22EZ007A4",
+    "category": "fsd",
+    "product_name": "Ceiling Fan",
+    "product_id": "puj7wgpctcgpn70b",
+    "biz_type": 0,
+    "model": "AC 02",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1664250283502zjU5/ae3f8389c01e5bb3312f5ca6882f6227.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 100,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "60": {
+        "code": "fan_switch",
+        "type": "Boolean",
+        "values": {}
+      },
+      "62": {
+        "code": "fan_speed",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "63": {
+        "code": "fan_direction",
+        "type": "Enum",
+        "values": {
+          "range": ["forward", "reverse"]
+        }
+      },
+      "101": {
+        "code": "fan_countdown_set",
+        "type": "Enum",
+        "values": {
+          "range": ["cancel", "1h", "2h", "4h", "8h"]
+        }
+      }
+    },
+    "ip": "192.168.68.63",
+    "version": "3.4"
+  },
+  {
+    "name": "Smart Power Strip",
+    "id": "2416761570039f15e68c",
+    "key": "bKYJ>loTZaZkUK#m",
+    "mac": "70:03:9f:15:e6:8c",
+    "uuid": "2416761570039f15e68c",
+    "category": "pc",
+    "product_name": "Smart Power Strip",
+    "product_id": "niibwa9h8haikh8y",
+    "biz_type": 0,
+    "model": "WP9",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/ay1517974017716dABhC/27ad256337771a83ad5bdd248221ea57.png",
+    "mapping": {
+      "1": {
+        "code": "switch_1",
+        "type": "Boolean",
+        "values": {}
+      },
+      "2": {
+        "code": "switch_2",
+        "type": "Boolean",
+        "values": {}
+      },
+      "3": {
+        "code": "switch_3",
+        "type": "Boolean",
+        "values": {}
+      },
+      "7": {
+        "code": "switch_usb1",
+        "type": "Boolean",
+        "values": {}
+      },
+      "9": {
+        "code": "countdown_1",
+        "type": "Integer",
+        "values": {
+          "unit": "s",
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "10": {
+        "code": "countdown_2",
+        "type": "Integer",
+        "values": {
+          "unit": "s",
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "11": {
+        "code": "countdown_3",
+        "type": "Integer",
+        "values": {
+          "unit": "s",
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "15": {
+        "code": "countdown_usb1",
+        "type": "Integer",
+        "values": {
+          "unit": "s",
+          "min": 0,
+          "max": 86400,
+          "scale": 0,
+          "step": 1
+        }
+      }
+    },
+    "ip": "",
+    "version": ""
+  },
+  {
+    "name": "Basement southeast motion sensor",
+    "id": "eb65ed7b6c7c47dbe9oih1",
+    "key": "V0/}'uMF4}Y{/A1C",
+    "mac": "d8:d6:68:9a:d0:c3",
+    "uuid": "a9ca49086d45d71c",
+    "sn": "FFNEM28MK000EB",
+    "category": "hps",
+    "product_name": "\u5b58\u5728\u4f20\u611f\u5668",
+    "product_id": "6vsyuvrcwrvu3tym",
+    "biz_type": 0,
+    "model": "ld24g",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1620461667609W0o0/11b9de787638959cb4c6ec6970e1edff.png",
+    "mapping": {
+      "1": {
+        "code": "presence_state",
+        "type": "Enum",
+        "values": {
+          "range": ["none", "presence", "peaceful", "small_move", "large_move"]
+        }
+      },
+      "2": {
+        "code": "sensitivity",
+        "type": "Integer",
+        "values": {
+          "min": 0,
+          "max": 9,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "3": {
+        "code": "near_detection",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 10
+        }
+      },
+      "4": {
+        "code": "far_detection",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 10
+        }
+      },
+      "6": {
+        "code": "checking_result",
+        "type": "Enum",
+        "values": {
+          "range": ["checking", "check_success", "check_failure", "others", "comm_fault", "radar_fault"]
+        }
+      },
+      "9": {
+        "code": "target_dis_closest",
+        "type": "Integer",
+        "values": {
+          "unit": "m",
+          "min": 0,
+          "max": 1000,
+          "scale": 2,
+          "step": 1
+        }
+      }
+    },
+    "ip": "192.168.68.116",
+    "version": "3.4"
+  },
+  {
+    "name": "Nookie room ceiling fan",
+    "id": "eb11bc6cb50517e4d6ixpt",
+    "key": "f2~FfW!EQe/MF?DM",
+    "mac": "50:8b:b9:f0:97:dc",
+    "uuid": "4a52e8a0dbff3e17",
+    "sn": "FMDEG22TC0078B",
+    "category": "fsd",
+    "product_name": "Ceiling Fan",
+    "product_id": "puj7wgpctcgpn70b",
+    "biz_type": 0,
+    "model": "AC 02",
+    "sub": false,
+    "icon": "https://images.tuyaus.com/smart/icon/bay1664250283502zjU5/ae3f8389c01e5bb3312f5ca6882f6227.png",
+    "mapping": {
+      "20": {
+        "code": "switch_led",
+        "type": "Boolean",
+        "values": {}
+      },
+      "22": {
+        "code": "bright_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 100,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "23": {
+        "code": "temp_value",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "60": {
+        "code": "fan_switch",
+        "type": "Boolean",
+        "values": {}
+      },
+      "62": {
+        "code": "fan_speed",
+        "type": "Integer",
+        "values": {
+          "unit": "",
+          "min": 1,
+          "max": 3,
+          "scale": 0,
+          "step": 1
+        }
+      },
+      "63": {
+        "code": "fan_direction",
+        "type": "Enum",
+        "values": {
+          "range": ["forward", "reverse"]
+        }
+      },
+      "101": {
+        "code": "fan_countdown_set",
+        "type": "Enum",
+        "values": {
+          "range": ["cancel", "1h", "2h", "4h", "8h"]
+        }
+      }
+    },
+    "ip": "",
+    "version": ""
+  }
+]

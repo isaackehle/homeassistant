@@ -1,0 +1,238 @@
+{
+    "timestamp": 1731189191.344929,
+    "devices": [
+        {
+            "id": "eb11bc6cb50517e4d6ixpt",
+            "ip": "192.168.68.117",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "puj7wgpctcgpn70b",
+            "token": true,
+            "wf_cfg": true,
+            "name": "Nookie room ceiling fan",
+            "key": "f2~FfW!EQe/MF?DM",
+            "mac": "50:8b:b9:f0:97:dc",
+            "ability": 0,
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": false,
+                    "22": 100,
+                    "23": 3,
+                    "60": false,
+                    "62": 2,
+                    "63": "forward",
+                    "101": "cancel"
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.4"
+        },
+        {
+            "id": "ebfe7e281f7ac4b32ebcv9",
+            "ip": "192.168.68.63",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "puj7wgpctcgpn70b",
+            "token": true,
+            "wf_cfg": true,
+            "name": "Theater fan North",
+            "key": "l8G)7:{*T{mm2O|N",
+            "mac": "a8:80:55:51:9a:30",
+            "ability": 0,
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": false,
+                    "22": 100,
+                    "23": 2,
+                    "60": false,
+                    "62": 1,
+                    "63": "reverse",
+                    "101": "cancel"
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.4"
+        },
+        {
+            "id": "eb95e12c37b72a9a53p7vy",
+            "ip": "192.168.68.119",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "e2zw3ra5sd3vfx7r",
+            "name": "Sukkah lights 3",
+            "key": "BnLePj[lZ)*1!3I]",
+            "mac": "7c:f6:66:4a:bb:41",
+            "ability": 0,
+            "token": "",
+            "wf_cfg": "",
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": true,
+                    "21": "pre_set",
+                    "22": 246,
+                    "23": 1000,
+                    "24": "011503e803dc",
+                    "25": "03e84c020",
+                    "26": 0,
+                    "101": "0C0C0C06",
+                    "103": 100,
+                    "104": 10
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.3"
+        },
+        {
+            "id": "eb53ace96c95ce410agoex",
+            "ip": "192.168.68.69",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "puj7wgpctcgpn70b",
+            "token": true,
+            "wf_cfg": true,
+            "name": "Whoopie room ceiling fan",
+            "key": ")sv#:ECGn!Lo.6!=",
+            "mac": "50:8b:b9:f0:9d:df",
+            "ability": 0,
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": false,
+                    "22": 100,
+                    "23": 3,
+                    "60": false,
+                    "62": 1,
+                    "63": "forward",
+                    "101": "cancel"
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.4"
+        },
+        {
+            "id": "eb65ed7b6c7c47dbe9oih1",
+            "ip": "192.168.68.116",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "6vsyuvrcwrvu3tym",
+            "token": true,
+            "wf_cfg": true,
+            "name": "Basement southeast motion sensor",
+            "key": "V0/}'uMF4}Y{/A1C",
+            "mac": "d8:d6:68:9a:d0:c3",
+            "ability": 0,
+            "dev_type": "default",
+            "err": "No response",
+            "origin": "broadcast",
+            "ver": "3.4"
+        },
+        {
+            "id": "eb49607bdf9c9ad8b3ezwc",
+            "ip": "192.168.68.120",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "e2zw3ra5sd3vfx7r",
+            "name": "Sukkah lights 2",
+            "key": "dy[Sx3JSw~P]92&+",
+            "mac": "7c:f6:66:41:76:5a",
+            "ability": 0,
+            "token": "",
+            "wf_cfg": "",
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": true,
+                    "21": "colour",
+                    "22": 1000,
+                    "23": 658,
+                    "24": "016603ca03e8",
+                    "25": "03e832020",
+                    "26": 0,
+                    "101": "0C0C0C06",
+                    "103": 100,
+                    "104": 0
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.3"
+        },
+        {
+            "id": "eb19be54e3c1e4a185vb0c",
+            "ip": "192.168.68.118",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "e2zw3ra5sd3vfx7r",
+            "name": "Sukkah lights 4",
+            "key": "~g'E.|dWshYb}_'C",
+            "mac": "7c:f6:66:4a:2e:9b",
+            "ability": 0,
+            "token": "",
+            "wf_cfg": "",
+            "dev_type": "default",
+            "err": "",
+            "type": "default",
+            "dps": {
+                "dps": {
+                    "20": false,
+                    "21": "colour",
+                    "22": 1000,
+                    "23": 1000,
+                    "24": "001b015d03e8",
+                    "25": "03e832020",
+                    "26": 0,
+                    "101": "0C0C0C06",
+                    "103": 100,
+                    "104": 0
+                }
+            },
+            "origin": "broadcast",
+            "ver": "3.3"
+        },
+        {
+            "id": "eb8548c1bafbdae0ccv7qc",
+            "ip": "192.168.68.114",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "puj7wgpctcgpn70b",
+            "token": true,
+            "wf_cfg": true,
+            "name": "Back porch ceiling fan",
+            "key": "O-5C1[^y9e;o8K^i",
+            "mac": "a8:80:55:73:29:e5",
+            "ability": 0,
+            "dev_type": "default",
+            "err": "No response",
+            "origin": "broadcast",
+            "ver": "3.4"
+        },
+        {
+            "id": "eb2233ffddbfe86deezzsa",
+            "ip": "192.168.68.104",
+            "active": 2,
+            "encrypt": true,
+            "productKey": "keyygrj8gg5qcpum",
+            "name": "Front porch string light",
+            "key": "PtM*U$q8Al;{3m^0",
+            "mac": "c4:82:e1:5c:65:d4",
+            "ability": 0,
+            "token": "",
+            "wf_cfg": "",
+            "dev_type": "default",
+            "origin": "broadcast",
+            "ver": "3.3"
+        }
+    ]
+}

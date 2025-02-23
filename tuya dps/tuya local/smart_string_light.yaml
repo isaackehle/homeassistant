@@ -1,0 +1,298 @@
+name: smart string light
+# https://developer.tuya.com/en/docs/iot/product-function-definition?id=K9s9rhj576ypf#title-2-DP%20details
+products:
+  - id: e2zw3ra5sd3vfx7r
+    name: smart string light
+primary_entity:
+  entity: light
+  dps:
+    - id: 20
+      type: boolean
+      name: switch
+    - id: 21
+      type: string
+      name: work_mode
+      mapping:
+        - dps_val: white
+          value: color_temp
+        - dps_val: colour
+          value: hs
+        - dps_val: pre_set
+          val: dynamic
+    - id: 22
+      name: brightness
+      type: integer
+      optional: true
+      range:
+        min: 10
+        max: 1000
+      mapping:
+        - scale: 0
+          step: 1
+    - id: 23
+      name: color_temp
+      type: integer
+      optional: true
+      range:
+        min: 0
+        max: 1000
+      mapping:
+        - scale: 0
+          step: 1
+          target_range:
+            min: 2700
+            max: 6500
+    - id: 24
+      name: rgbhsv
+      type: hex
+      optional: true
+      format:
+        - name: h
+          bytes: 2
+          range:
+            min: 0
+            max: 360
+          mapping:
+            - scale: 0
+              step: 1
+        - name: s
+          bytes: 2
+          range:
+            min: 0
+            max: 1000
+          mapping:
+            - scale: 0
+              step: 1
+        - name: v
+          bytes: 2
+          range:
+            min: 0
+            max: 1000
+          mapping:
+            - scale: 0
+              step: 1
+    - id: 25
+      # 0011223344445555666677778888
+      # 00: scene ID.
+      # 11: transition interval between lighting modes (0 to 100).
+      # 22: lighting mode duration (0 to 100).
+      # 33: lighting mode (0: static. 1: jumping. 2: gradient)
+      # 4444: H (hue: 0 to 360, 0X0000 to 0X0168)
+      # 5555: S (saturation: 0 to 1000, 0X0000 to 0X03E8)
+      # 6666: V (value: 0 to 1000, 0X0000 to 0X03E8)
+      # 7777: brightness (0 to 1000)
+      # 8888: color temperature (0 to 1000)
+      # Except for the scene ID, the data in this string represents one color data unit. If multiple colors are used, you will get multiple color data units accordingly.
+      # [Sukkah lights 3          ] 192.168.68.119     - [On]  - DPS:
+      # {'20': True,
+      #  '21': 'pre_set',
+      #  '22': 246,
+      #  '23': 1000,
+      #  '24': '0115 03e8 03dc', '25':
+      #   '03 e8 4c 02 0',
+      #   '26': 0, '101': '0C0C0C06', '103': 100, '104': 10}
+
+      name: scene_data
+      type: hex
+      optional: true
+      format:
+        - name: scene_num
+          bytes: 2
+          range:
+            min: 1
+            max: 8
+          mapping:
+            - scale: 0
+              step: 1
+        - name: unit_change_mode
+          bytes: 2
+          range:
+            min: 0
+            max: 100
+          mapping:
+            - dps_val: white
+              value: color_temp
+            - dps_val: colour
+              value: hs
+      # "25": {
+      #   "code": "scene_data",
+      #   "type": "Json",
+      #   "raw_values": "{\"scene_num\":{\"min\":1,\"scale\":0,\"max\":8,\"step\":1},\"scene_units\": {\"unit_change_mode\":{\"range\":[\"static\",\"jump\",\"gradient\"]},\"unit_switch_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"unit_gradient_duration\":{\"min\":0,\"scale\":0,\"max\":100,\"step\":1},\"bright\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"temperature\":{\"min\":0,\"scale\":0,\"max\":1000,\"step\":1},\"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}}}",
+      #   "values": {
+      #     "": {
+      #       "min": 1,
+      #       "scale": 0,
+      #       "max": 8,
+      #       "step": 1
+      #     },
+      #     "scene_units": {
+      #       "unit_change_mode": {
+      #         "range": ["static", "jump", "gradient"]
+      #       },
+      #       "unit_switch_duration": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "max": 100,
+      #         "step": 1
+      #       },
+      #       "unit_gradient_duration": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "max": 100,
+      #         "step": 1
+      #       },
+      #       "bright": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "max": 1000,
+      #         "step": 1
+      #       },
+      #       "temperature": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "max": 1000,
+      #         "step": 1
+      #       },
+      #       "h": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "unit": "",
+      #         "max": 360,
+      #         "step": 1
+      #       },
+      #       "s": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "unit": "",
+      #         "max": 1000,
+      #         "step": 1
+      #       },
+      #       "v": {
+      #         "min": 0,
+      #         "scale": 0,
+      #         "unit": "",
+      #         "max": 1000,
+      #         "step": 1
+      #       }
+      #     }
+      #   }
+      # },
+
+    - id: 26
+      name: countdown
+      type: integer
+      optional: true
+      range:
+        min: 0
+        max: 86400
+      mapping:
+        - scale: 0
+          step: 1
+    - id: 28
+      name: control_data
+      type: hex
+      optional: true
+
+    #   "28": {
+    #     "code": "control_data",
+    #     "type": "Json",
+    #     "raw_values": "{\"change_mode\":{\"range\":[\"direct\",\"gradient\"]}, \"bright\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"temperature\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":1000,\"step\":1}, \"h\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":360,\"step\":1},\"s\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1},\"v\":{\"min\":0,\"scale\":0,\"unit\":\"\",\"max\":255,\"step\":1}}",
+    #     "values": {
+    #       "change_mode": {
+    #         "range": ["direct", "gradient"]
+    #       },
+    #       "bright": {
+    #         "min": 0,
+    #         "scale": 0,
+    #         "unit": "",
+    #         "max": 1000,
+    #         "step": 1
+    #       },
+    #       "temperature": {
+    #         "min": 0,
+    #         "scale": 0,
+    #         "unit": "",
+    #         "max": 1000,
+    #         "step": 1
+    #       },
+    #       "h": {
+    #         "min": 0,
+    #         "scale": 0,
+    #         "unit": "",
+    #         "max": 360,
+    #         "step": 1
+    #       },
+    #       "s": {
+    #         "min": 0,
+    #         "scale": 0,
+    #         "unit": "",
+    #         "max": 255,
+    #         "step": 1
+    #       },
+    #       "v": {
+    #         "min": 0,
+    #         "scale": 0,
+    #         "unit": "",
+    #         "max": 255,
+    #         "step": 1
+    #       }
+    #     }
+    #   }
+    # },
+
+secondary_entities:
+  - entity: number
+    translation_key: timer
+    category: config
+    dps:
+      - id: 26
+        name: value
+        type: integer
+        optional: true
+        range:
+          min: 0
+          max: 86400
+        unit: min
+        mapping:
+          - scale: 60
+            step: 60
+          - dps_val: null
+  - entity: select
+    name: Scene
+    icon: 'mdi:palette'
+    category: config
+    dps:
+      - id: 25
+        type: string
+        name: option
+        optional: true
+        mapping:
+          - dps_val: '000c0d0000000000000000c80000'
+            # color: brown, static
+            value: Night
+          - dps_val: '010e0d0000840000000003e801f4'
+            # color: white, static
+            value: Read
+          - dps_val: '020e0d0000e80383000003e803e8'
+            # color: lt cyan, static
+            value: Working
+          - dps_val: '030e0d00001403e8000001f401f4'
+            # color: grey, static
+            value: Leisure
+          - dps_val: '04464602007803e803e800000000464602007803e8000a00000000'
+            # color: G+DkG, Breath, Mid speed
+            value: Soft
+          - dps_val: "05464601000003e803e800000000464601007803e803e800000000\
+              46460100f003e803e800000000464601003d03e803e80000000046460100ae\
+              03e803e800000000464601011303e803e800000000"
+            # color* R+G+B+Y+C+V, Flash, Mid speed
+            value: Colorful
+          - dps_val: "06464601000003e803e800000000464601007803e803e800000000\
+              46460100f003e803e800000000"
+            # color* R+G+B, Flash, Mid speed
+            value: Dazzling
+          - dps_val: "07464602000003e803e800000000464602007803e803e800000000\
+              46460200f003e803e800000000464602003d03e803e80000000046460200ae\
+              03e803e800000000464602011303e803e800000000"
+            # color* R+G+B+Y+C+V, Breath, Mid speed
+            value: Gorgeous
