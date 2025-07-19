@@ -1,0 +1,63 @@
+cover:
+  - platform: template
+    covers:
+      garage_door_left:
+        device_class: garage
+        friendly_name: "Garage Door, Left"
+        value_template: "{{ iif (is_state('binary_sensor.garage_tilt_state_left', 'off'), 'closed', 'open') }}"
+        icon_template: >-
+          {% if states('binary_sensor.garage_tilt_state_left')|float < 100%}
+            mdi:garage-open
+          {% else %}
+            mdi:garage
+          {% endif %}
+        open_cover:
+          - condition: state
+            entity_id: binary_sensor.garage_tilt_state_left
+            state: "off"
+          - action: light.turn_on
+            target:
+              entity_id: light.garage_door_relay_left
+        close_cover:
+          - condition: state
+            entity_id: binary_sensor.garage_tilt_state_left
+            state: "on"
+          - action: light.turn_on
+            target:
+              entity_id: light.garage_door_relay_left
+        stop_cover:
+          action: light.turn_off
+          target:
+            entity_id: light.garage_door_relay_left
+
+  - platform: template
+    covers:
+      garage_door_right:
+        device_class: garage
+        friendly_name: "Garage Door, Right"
+        value_template: "{{ iif (is_state('binary_sensor.garage_tilt_state_right', 'off'), 'closed', 'open') }}"
+        icon_template: >-
+          {% if states('binary_sensor.garage_tilt_state_right')|float < 100%}
+            mdi:garage-open
+          {% else %}
+            mdi:garage
+          {% endif %}
+        open_cover:
+          - condition: state
+            entity_id: binary_sensor.garage_tilt_state_right
+            state: "off"
+          - action: light.turn_on
+            target:
+              entity_id: light.garage_door_relay_right
+        close_cover:
+          - condition: state
+            entity_id: binary_sensor.garage_tilt_state_right
+            state: "on"
+          - action: light.turn_on
+            target:
+              entity_id: light.garage_door_relay_right
+        stop_cover:
+          action: light.turn_off
+          target:
+            entity_id: light.garage_door_relay_right
+
