@@ -41,37 +41,37 @@ blueprint:
 
     away_state:
       name: Away state for presence
-      default: 'not_home'
+      default: "not_home"
       selector:
         text: {}
 
     door_closed_for:
       name: Door closed for (delay)
-      default: '00:02:00'
+      default: "00:02:00"
       selector:
         duration: {}
 
     away_for:
       name: Away for (grace)
-      default: '00:05:00'
+      default: "00:05:00"
       selector:
         duration: {}
 
     close_stable_for:
       name: Closed stability time
-      default: '00:00:15'
+      default: "00:00:15"
       selector:
         duration: {}
 
     away_wait_timeout:
       name: Max wait for close (when away)
-      default: '00:10:00'
+      default: "00:10:00"
       selector:
         duration: {}
 
     grace_before_lock:
       name: Final grace before locking
-      default: '00:00:10'
+      default: "00:00:10"
       selector:
         duration: {}
 
@@ -92,18 +92,20 @@ variables:
   override: !input override_boolean
   away_state: !input away_state
   contact_open_is_on: !input contact_open_is_on
+  override_state: "{{ states(override) }}"
 
 triggers:
   # Door closed long enough
   - id: door_closed_off
     trigger: state
     entity_id: !input contact_entity
-    to: 'off'
+    to: "off"
     for: !input door_closed_for
+
   - id: door_closed_on
     trigger: state
     entity_id: !input contact_entity
-    to: 'on'
+    to: "on"
     for: !input door_closed_for
 
   # Presence away long enough
@@ -113,82 +115,77 @@ triggers:
     to: !input away_state
     for: !input away_for
 
-  # Override ON cancels waits (mode: restart)
-  - id: override_on
+  # Override changed; ON cancels waits (mode: restart), OFF: may lock immediately
+  - id: override_changed
     trigger: state
     entity_id: !input override_boolean
-    to: 'on'
-
-  # When override turns OFF, we may lock immediately
-  - id: override_off
-    trigger: state
-    entity_id: !input override_boolean
-    to: 'off'
 
 actions:
   # -------- DEBUG: snapshot everything on EVERY trigger --------
-  - alias: 'DEBUG: Snapshot inputs into trace vars'
+  - alias: "DEBUG: Snapshot inputs into trace vars"
     variables:
       _dbg_trigger: "{{ trigger.id | default('unknown') }}"
-      _dbg_time: '{{ now() }}'
+      _dbg_time: "{{ now() }}"
       _dbg_lock_name: "{{ state_attr(lock, 'friendly_name') | default(lock) }}"
-      _dbg_lock_state: '{{ states(lock) }}'
-      _dbg_door_raw: '{{ states(door) }}'
+      _dbg_lock_state: "{{ states(lock) }}"
+      _dbg_door_raw: "{{ states(door) }}"
       _dbg_door_resolved: >
         {% if contact_open_is_on | bool %}
           {{ 'open' if is_state(door,'on') else 'closed' if is_state(door,'off') else states(door) }}
         {% else %}
           {{ 'open' if is_state(door,'off') else 'closed' if is_state(door,'on') else states(door) }}
         {% endif %}
-      _dbg_presence_state: '{{ states(presence) }}'
-      _dbg_override_state: '{{ states(override) }}'
-      _dbg_away_state: '{{ away_state }}'
+      _dbg_presence_state: "{{ states(presence) }}"
+      _dbg_away_state: "{{ away_state }}"
 
-  - alias: 'DEBUG: Write to system_log'
-    action: 'system_log.write'
+  - alias: "DEBUG: Write to system_log"
+    action: "system_log.write"
     data:
-      level: 'info'
+      level: "info"
       message: >-
         Smart Door Auto-Lock | trigger={{ _dbg_trigger }} | t={{ _dbg_time }}
         | lock={{ _dbg_lock_state }} | door_raw={{ _dbg_door_raw }} door={{ _dbg_door_resolved }}
-        | presence={{ _dbg_presence_state }} | override={{ _dbg_override_state }} | away_state={{ _dbg_away_state }}
+        | presence={{ _dbg_presence_state }} | override={{ override_state }} | away_state={{ _dbg_away_state }}
 
-  - alias: 'DEBUG: Logbook entry (door)'
-    action: 'logbook.log'
+  - alias: "DEBUG: Logbook entry (door)"
+    action: "logbook.log"
     data:
-      name: 'Smart Door Auto-Lock'
+      name: "Smart Door Auto-Lock"
       message: >-
         Trigger={{ _dbg_trigger }} | Door={{ _dbg_door_resolved }} (raw={{ _dbg_door_raw }})
-        | Lock={{ _dbg_lock_state }} | Presence={{ _dbg_presence_state }} | Override={{ _dbg_override_state }}
+        | Lock={{ _dbg_lock_state }} | Presence={{ _dbg_presence_state }} | Override={{ override_state }}
       entity_id: !input contact_entity
 
-  - alias: 'DEBUG: Logbook entry (lock)'
-    action: 'logbook.log'
+  - alias: "DEBUG: Logbook entry (lock)"
+    action: "logbook.log"
     data:
-      name: 'Smart Door Auto-Lock'
+      name: "Smart Door Auto-Lock"
       message: >-
         Trigger={{ _dbg_trigger }} | Door={{ _dbg_door_resolved }} (raw={{ _dbg_door_raw }})
-        | Lock={{ _dbg_lock_state }} | Presence={{ _dbg_presence_state }} | Override={{ _dbg_override_state }}
+        | Lock={{ _dbg_lock_state }} | Presence={{ _dbg_presence_state }} | Override={{ override_state }}
       entity_id: !input lock_entity
 
   # -------- Early exit if override is ON (but after debug) --------
   - choose:
       - conditions:
-          - condition: state
-            entity_id: !input override_boolean
-            state: 'on'
+          - condition: template
+            value_template: >
+              {{ is_state(override_state, 'on') }}   {# ON == means Override Enabled #}
         sequence:
-          - stop: 'Override is ON; skipping auto-lock'
+          - stop: "Override is ON; skipping auto-lock"
 
   # -------- Main logic --------
   - choose:
       # Case 0: Override just turned OFF — lock immediately if closed & unlocked
       - conditions:
           - condition: trigger
-            id: override_off
+            id: override_changed
+          - condition: template
+            value_template: >
+              {{ is_state(override_state, 'off') }}
           - condition: state
             entity_id: !input lock_entity
-            state: 'unlocked'
+            state: "unlocked"
           - condition: template
             value_template: >
               {% if contact_open_is_on | bool %}
@@ -197,7 +194,7 @@ actions:
                 {{ is_state(door, 'on') }}    {# ON  == closed when ON means closed is false #}
               {% endif %}
         sequence:
-          - action: 'lock.lock'
+          - action: "lock.lock"
             target:
               entity_id: !input lock_entity
 
@@ -208,18 +205,18 @@ actions:
               - condition: and
                 conditions:
                   - condition: template
-                    value_template: '{{ contact_open_is_on | bool }}'
+                    value_template: "{{ contact_open_is_on | bool }}"
                   - condition: trigger
                     id: door_closed_off
               - condition: and
                 conditions:
                   - condition: template
-                    value_template: '{{ not (contact_open_is_on | bool) }}'
+                    value_template: "{{ not (contact_open_is_on | bool) }}"
                   - condition: trigger
                     id: door_closed_on
           - condition: state
             entity_id: !input lock_entity
-            state: 'unlocked'
+            state: "unlocked"
           - condition: template
             value_template: >
               {% if contact_open_is_on | bool %}
@@ -229,7 +226,7 @@ actions:
               {% endif %}
         sequence:
           - delay: !input grace_before_lock
-          - action: 'lock.lock'
+          - action: "lock.lock"
             target:
               entity_id: !input lock_entity
 
@@ -239,7 +236,7 @@ actions:
             id: away
           - condition: state
             entity_id: !input lock_entity
-            state: 'unlocked'
+            state: "unlocked"
         sequence:
           # If door open, wait for closed (stable) up to timeout
           - choose:
@@ -255,23 +252,23 @@ actions:
                   - choose:
                       - conditions:
                           - condition: template
-                            value_template: '{{ contact_open_is_on | bool }}'
+                            value_template: "{{ contact_open_is_on | bool }}"
                         sequence:
                           - wait_for_trigger:
                               - trigger: state
                                 entity_id: !input contact_entity
-                                to: 'off'
+                                to: "off"
                                 for: !input close_stable_for
                             timeout: !input away_wait_timeout
                             continue_on_timeout: true
                       - conditions:
                           - condition: template
-                            value_template: '{{ not (contact_open_is_on | bool) }}'
+                            value_template: "{{ not (contact_open_is_on | bool) }}"
                         sequence:
                           - wait_for_trigger:
                               - trigger: state
                                 entity_id: !input contact_entity
-                                to: 'on'
+                                to: "on"
                                 for: !input close_stable_for
                             timeout: !input away_wait_timeout
                             continue_on_timeout: true
@@ -287,11 +284,11 @@ actions:
                         {{ is_state(door, 'off') }}
                       {% endif %}
                 sequence:
-                  - stop: 'Door is open; skipping lock.'
+                  - stop: "Door is open; skipping lock."
 
           # Final check and lock
           - condition: template
-            value_template: '{{ states(presence) == away_state }}'
+            value_template: "{{ states(presence) == away_state }}"
           - delay: !input grace_before_lock
           - condition: template
             value_template: >
@@ -300,6 +297,6 @@ actions:
               {% else %}
                 {{ is_state(door, 'on') }}
               {% endif %}
-          - action: 'lock.lock'
+          - action: "lock.lock"
             target:
               entity_id: !input lock_entity
