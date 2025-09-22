@@ -1,191 +1,346 @@
 # https://www.home-assistant.io/docs/blueprint/tutorial/
 blueprint:
-  name: Door lock automation with multiple inputs
-  description: Control a door lock based on lock state, closed state and motion
+  name: Smart Door Auto-Lock (override + door-open safe)
+  description: >
+    Auto-locks when the door has been closed for a period or when presence is away.
+    Never locks while open (waits for close with timeout). Override toggle disables all auto-locking.
+    When override turns OFF and the door is closed & unlocked, lock immediately.
+    Includes per-run debug: traces + system_log + logbook snapshot.
   domain: automation
-  homeassistant:
-    min_version: "2024.6.0"
   input:
-    position_sensor:
-      name: Door position state
-      description: The contact sensor to determine if the door is open or closed
+    lock_entity:
+      name: Lock
       selector:
         entity:
           filter:
-           domain: binary_sensor
-    door_lock:
-      name: Door lock
-      description: The door to control
+            - domain: lock
+
+    contact_entity:
+      name: Door contact
       selector:
         entity:
           filter:
-            domain: lock
-    control_timer:
-      name: Control timer
-      description: Time to wait for all events to have stopped before locking.
-      default: ""
+            - domain: binary_sensor
+              device_class: door
+            - domain: binary_sensor
+              device_class: opening
+
+    presence_entity:
+      name: Presence (person or device_tracker)
       selector:
         entity:
           filter:
-            domain: timer
-    # timer_default:
-    #   name: Wait time
-    #   description: Time to leave the light on after last motion is detected.
-    #   default: 120
-    #   selector:
-    #     number:
-    #       min: 0
-    #       max: 3600
-    #       unit_of_measurement: seconds
-    # disable_boolean:
-    #   name: Disable automation override
-    #   description: Allow for the automation to be disabled.
-    #   default: ""
-    #   selector:
-    #     entity:
-    #       filter:
-    #         domain: input_boolean
+            - domain: person
+            - domain: device_tracker
+
+    override_boolean:
+      name: Override toggle
+      selector:
+        entity:
+          filter:
+            - domain: input_boolean
+
+    away_state:
+      name: Away state for presence
+      default: 'not_home'
+      selector:
+        text: {}
+
+    door_closed_for:
+      name: Door closed for (delay)
+      default: '00:02:00'
+      selector:
+        duration: {}
+
+    away_for:
+      name: Away for (grace)
+      default: '00:05:00'
+      selector:
+        duration: {}
+
+    close_stable_for:
+      name: Closed stability time
+      default: '00:00:15'
+      selector:
+        duration: {}
+
+    away_wait_timeout:
+      name: Max wait for close (when away)
+      default: '00:10:00'
+      selector:
+        duration: {}
+
+    grace_before_lock:
+      name: Final grace before locking
+      default: '00:00:10'
+      selector:
+        duration: {}
+
+    contact_open_is_on:
+      name: Contact open equals 'on'
+      description: Flip off if your sensor reports ON=closed.
+      default: true
+      selector:
+        boolean: {}
+
+    auto_lock_time:
+      name: Auto-lock time at night
+      description: Time when the lock should auto-lock (e.g., 23:00 for 11pm)
+      default: '23:00'
+      selector:
+        time: {}
+
+mode: restart
+max_exceeded: silent
 
 variables:
-  door_lock: !input door_lock
-  position_sensor: !input position_sensor
-  control_timer: !input control_timer
-#   timer_default: !input timer_default
-#   disable_boolean: !input disable_boolean
+  lock: !input lock_entity
+  door: !input contact_entity
+  presence: !input presence_entity
+  override: !input override_boolean
+  auto_lock_time: !input auto_lock_time
+  away_state: !input away_state
+  contact_open_is_on: !input contact_open_is_on
+  override_state: '{{ states(override) }}'
 
-trigger:
-  # - alias: Door opened
-  #   id: door opened
-  #   platform: state
-  #   entity_id: !input position_sensor
-  #   to: "open"
-  # - alias: Door closed
-  #   id: door closed
-  #   platform:
-  #   to: "not_opened"
-  #   entity_id: !input position_sensor
-  # - alias: Door unlocked
-  #   id: door unlocked
-  #   platform: state
-  #   to: "unlocked"
-  #   entity_id: !input door_lock
-  # - alias: Door locked
-  #   id: door locked
-  #   platform: state
-  #   to: "locked"
-  #   entity_id: !input door_lock
-  # - alias: Timer changed
-  #   id: timer changed
-  #   platform: state
-  #   for:
-  #     hours: 0
-  #     minutes: 0
-  #     seconds: 0
-  #   entity_id: !input control_timer
-  # - alias: Lock override changed
-  #   platform: state
-  #   id: override changed
-  #   entity_id: !input disable_boolean
+triggers:
+  # Door closed long enough
+  - id: door_closed_off
+    trigger: state
+    entity_id: !input contact_entity
+    to: 'off'
+    for: !input door_closed_for
 
-action:
+  - id: door_closed_on
+    trigger: state
+    entity_id: !input contact_entity
+    to: 'on'
+    for: !input door_closed_for
+
+  # Presence away long enough
+  - id: away
+    trigger: state
+    entity_id: !input presence_entity
+    to: !input away_state
+    for: !input away_for
+
+  # Override changed; ON cancels waits (mode: restart), OFF: may lock immediately
+  - id: override_changed
+    trigger: state
+    entity_id: !input override_boolean
+
+  # Night auto-lock trigger
+  - id: night_auto_lock
+    trigger: time
+    at: !input auto_lock_time
+
+actions:
+  # -------- DEBUG: snapshot everything on EVERY trigger --------
+  - alias: 'DEBUG: Snapshot inputs into trace vars'
+    variables:
+      door_position: >
+        {% if contact_open_is_on | bool %}
+          {{ 'open' if is_state(door,'on') else 'closed' if is_state(door,'off') else states(door) }}
+        {% else %}
+          {{ 'open' if is_state(door,'off') else 'closed' if is_state(door,'on') else states(door) }}
+        {% endif %}
+
+      presence_state: '{{ states(presence) }}'
+
+      _dbg_trigger: "{{ trigger.id | default('null') }}"
+      t: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      _dbg_lock_name: "{{ state_attr(lock, 'friendly_name') | default(lock) }}"
+      _dbg_lock_state: '{{ states(lock) }}'
+      _dbg_door_raw: '{{ states(door) }}'
+      _dbg_away_state: '{{ away_state }}'
+
+      auto_lock_dt: >
+        {{ now().replace(hour=(auto_lock_time.split(':')[0]|int),
+                      minute=(auto_lock_time.split(':')[1]|int),
+                      second=auto_lock_time.split(':')[2]|int,
+                      microsecond=0) | as_datetime }}
+
+  - alias: 'DEBUG: Write to system_log'
+    action: 'system_log.write'
+    data:
+      level: 'info'
+      message: >-
+        Smart Door Auto-Lock | trigger={{ _dbg_trigger }} | t={{ t }}
+        | lock={{ _dbg_lock_state }} | door={{ door_position }}
+        | presence={{ presence_state }} | override={{ override_state }} | away_state={{ _dbg_away_state }}
+        | Night Auto Lock={{ auto_lock_dt }}
+
+  - alias: 'DEBUG: Logbook entry (door)'
+    action: 'logbook.log'
+    data:
+      name: 'Smart Door Auto-Lock'
+      message: >-
+        Trigger={{ _dbg_trigger }} | Door={{ door_position }}
+        | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+        | Night Auto Lock={{ auto_lock_dt }}
+      entity_id: !input contact_entity
+
+  - alias: 'DEBUG: Logbook entry (lock)'
+    action: 'logbook.log'
+    data:
+      name: 'Smart Door Auto-Lock'
+      message: >-
+        Trigger={{ _dbg_trigger }} | Door={{ door_position }}
+        | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+        | Night Auto Lock={{ auto_lock_dt }}
+      entity_id: !input lock_entity
+
+  # -------- Early exit if override is ON (but after debug) --------
   - choose:
-      # - conditions:
-      #     - condition: trigger
-      #       id:
-      #         - door opened
-      #   sequence:
-      #     - alias: Cancel timer
-      #       service: timer.cancel
-      #       target:
-      #         entity_id: !input control_timer
+      - conditions:
+          - condition: template
+            value_template: "{{ override_state == 'on' }}" # ON == means Override Enabled
+        sequence:
+          - stop: 'Override is ON; skipping auto-lock'
 
-      # - conditions:
-      #     - condition: trigger
-      #       id:
-      #         - door closed
-      #   sequence:
-      #     - alias: Start timer
-      #       service: timer.start
-      #       data:
-      #         duration: timer_default
-      #       target:
-      #         entity_id: !input control_timer
-
+  # -------- Main logic --------
+  - choose:
+      # Case 0: Override just turned OFF — lock immediately if closed & unlocked
       - conditions:
           - condition: trigger
-            id:
-              - door locked
+            id: override_changed
+          - condition: template
+            value_template: "{{ override_state == 'off' }}" # should be OFF due to above
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+          - condition: template
+            value_template: "{{ door_position == 'closed' }}"
         sequence:
-          - alias: Cancel timer if door is closed and locked
-            if:
-              - alias: Verify door is locked and closed
-                condition: and
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+      # Case 1: Door closed enough — lock (if unlocked)
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: and
                 conditions:
-                  # - alias: Verify door is closed
-                  #   type: is_not_open
-                  #   condition: device
-                  #   domain: binary_sensor
-                  #   device_id: !input position_sensor
-                  - alias: Verify door is locked
-                    type: is_locked
-                    condition: device
-                    domain: lock
-                    device_id: !input door_lock
-            then:
-              - alias: Cancel timer
-                service: timer.cancel
-                target:
-                  entity_id: !input control_timer
-
-      - conditions:
-          - condition: trigger
-            id:
-              - door unlocked
-        sequence:
-          # - alias: Start timer if door is closed
-          #   if:
-              # - alias: Door is closed
-              #   type: is_not_open
-              #   condition: device
-              #   domain: binary_sensor
-              #   device_id: !input position_sensor
-            # then:
-              - alias: Start timer
-                service: timer.start
-                data:
-                  duration: timer_default
-                target:
-                  device_id: !input control_timer
-      - conditions:
-          - condition: trigger
-            id:
-              - timer changed
-        sequence:
-          - alias: >-
-              Lock the door if the door is closed and unlocked, and timer
-              finished
-            if:
-              - alias: Verify door is unlocked and closed, and timer is idle
-                condition: and
+                  - condition: template
+                    value_template: '{{ contact_open_is_on | bool }}'
+                  - condition: trigger
+                    id: door_closed_off
+              - condition: and
                 conditions:
-                  - alias: Verify lock is unlocked
-                    condition: device
-                    type: is_unlocked
-                    domain: lock
-                    device_id: !input door_lock
-                  # - alias: Verify door is closed
-                  #   domain: binary_sensor
-                  #   condition: device
-                  #   type: is_not_open
-                  #   device_id: !input door_lock
-                  # - alias: Verify timer is idle
-                  #   domain: timer
-                  #   condition: device
-                  #   state: idle
-                  #   device_id: !input control_timer
-            then:
-              - alias: Lock the door
-                service: lock.lock
-                target:
-                  entity_id: !input door_lock
-# data['action'][0]['choose'][3]['sequence'][0]['then'][0]['domain']. Got 'timer'.
+                  - condition: template
+                    value_template: '{{ not (contact_open_is_on | bool) }}'
+                  - condition: trigger
+                    id: door_closed_on
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+          - condition: template
+            value_template: >
+              {% if contact_open_is_on | bool %}
+                {{ is_state(door, 'off') }}
+              {% else %}
+                {{ is_state(door, 'on') }}
+              {% endif %}
+        sequence:
+          - delay: !input grace_before_lock
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+      # Case 2: Away — lock only if/when door is closed
+      - conditions:
+          - condition: trigger
+            id: away
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+        sequence:
+          # If door open, wait for closed (stable) up to timeout
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {% if contact_open_is_on | bool %}
+                        {{ is_state(door, 'on') }}
+                      {% else %}
+                        {{ is_state(door, 'off') }}
+                      {% endif %}
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: '{{ contact_open_is_on | bool }}'
+                        sequence:
+                          - wait_for_trigger:
+                              - trigger: state
+                                entity_id: !input contact_entity
+                                to: 'off'
+                                for: !input close_stable_for
+                            timeout: !input away_wait_timeout
+                            continue_on_timeout: true
+                      - conditions:
+                          - condition: template
+                            value_template: '{{ not (contact_open_is_on | bool) }}'
+                        sequence:
+                          - wait_for_trigger:
+                              - trigger: state
+                                entity_id: !input contact_entity
+                                to: 'on'
+                                for: !input close_stable_for
+                            timeout: !input away_wait_timeout
+                            continue_on_timeout: true
+
+          # If still open after waiting, stop
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ door_position == 'open' }}"
+                sequence:
+                  - stop: 'Door is open; skipping lock.'
+
+          # Final check and lock
+          - condition: template
+            value_template: '{{ presence_state == away_state }}'
+          - delay: !input grace_before_lock
+          - condition: template
+            value_template: "{{ door_position == 'closed' }}"
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+      # Case 3: Night auto-lock
+      - conditions:
+          - condition: trigger
+            id: night_auto_lock
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+          - condition: template
+            value_template: "{{ door_position == 'open' }}"
+        sequence:
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+    # Default: do nothing
+    default:
+      - alias: 'No action taken log (door)'
+        action: 'logbook.log'
+        data:
+          name: 'Smart Door Auto-Lock'
+          message: >-
+            Trigger={{ _dbg_trigger }} | Door={{ door_position }}
+            | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+            | Night Auto Lock={{ auto_lock_dt }} --> NOOP
+          entity_id: !input contact_entity
+
+      - alias: 'No action taken log (lock)'
+        action: 'logbook.log'
+        data:
+          name: 'Smart Door Auto-Lock'
+          message: >-
+            Trigger={{ _dbg_trigger }} | Door={{ door_position }}
+            | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+            | Night Auto Lock={{ auto_lock_dt }} --> NOOP
+          entity_id: !input lock_entity
