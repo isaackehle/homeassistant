@@ -95,7 +95,7 @@ max_exceeded: silent
 
 variables:
   lock: !input lock_entity
-  door: !input contact_entity
+  contact: !input contact_entity
   presence: !input presence_entity
   override: !input override_boolean
   auto_lock_time: !input auto_lock_time
@@ -138,21 +138,21 @@ actions:
   # -------- DEBUG: snapshot everything on EVERY trigger --------
   - alias: 'DEBUG: Snapshot inputs into trace vars'
     variables:
+      _dbg_trigger: "{{ trigger.id | default('null') }}"
+
+      contact_state: '{{ states(contact) }}'
       door_position: >
         {% if contact_open_is_on | bool %}
-          {{ 'open' if is_state(door,'on') else 'closed' if is_state(door,'off') else states(door) }}
+          {{ 'open' if is_state(contact,'on') else 'closed' if is_state(contact,'off') else contact_state }}
         {% else %}
-          {{ 'open' if is_state(door,'off') else 'closed' if is_state(door,'on') else states(door) }}
+          {{ 'open' if is_state(contact,'off') else 'closed' if is_state(contact,'on') else contact_state }}
         {% endif %}
 
       presence_state: '{{ states(presence) }}'
+      lock_state: '{{ states(lock) }}'
 
-      _dbg_trigger: "{{ trigger.id | default('null') }}"
       t: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
       _dbg_lock_name: "{{ state_attr(lock, 'friendly_name') | default(lock) }}"
-      _dbg_lock_state: '{{ states(lock) }}'
-      _dbg_door_raw: '{{ states(door) }}'
-      _dbg_away_state: '{{ away_state }}'
 
       auto_lock_dt: >
         {{ now().replace(hour=(auto_lock_time.split(':')[0]|int),
@@ -166,17 +166,17 @@ actions:
       level: 'info'
       message: >-
         Smart Door Auto-Lock | trigger={{ _dbg_trigger }} | t={{ t }}
-        | lock={{ _dbg_lock_state }} | door={{ door_position }}
-        | presence={{ presence_state }} | override={{ override_state }} | away_state={{ _dbg_away_state }}
-        | Night Auto Lock={{ auto_lock_dt }}
+        | lock={{ lock_state }} | position={{ door_position }}
+        | presence={{ presence_state }} | override={{ override_state }} | away_state={{ away_state }}
+        | night_auto_lock={{ auto_lock_dt }}
 
   - alias: 'DEBUG: Logbook entry (door)'
     action: 'logbook.log'
     data:
       name: 'Smart Door Auto-Lock'
       message: >-
-        Trigger={{ _dbg_trigger }} | Door={{ door_position }}
-        | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+        Trigger={{ _dbg_trigger }} | Position={{ door_position }}
+        | Lock={{ lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
         | Night Auto Lock={{ auto_lock_dt }}
       entity_id: !input contact_entity
 
@@ -185,8 +185,8 @@ actions:
     data:
       name: 'Smart Door Auto-Lock'
       message: >-
-        Trigger={{ _dbg_trigger }} | Door={{ door_position }}
-        | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+        Trigger={{ _dbg_trigger }} | Position={{ door_position }}
+        | Lock={{ lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
         | Night Auto Lock={{ auto_lock_dt }}
       entity_id: !input lock_entity
 
@@ -238,9 +238,9 @@ actions:
           - condition: template
             value_template: >
               {% if contact_open_is_on | bool %}
-                {{ is_state(door, 'off') }}
+                {{ is_state(contact, 'off') }}
               {% else %}
-                {{ is_state(door, 'on') }}
+                {{ is_state(contact, 'on') }}
               {% endif %}
         sequence:
           - delay: !input grace_before_lock
@@ -262,9 +262,9 @@ actions:
                   - condition: template
                     value_template: >
                       {% if contact_open_is_on | bool %}
-                        {{ is_state(door, 'on') }}
+                        {{ is_state(contact, 'on') }}
                       {% else %}
-                        {{ is_state(door, 'off') }}
+                        {{ is_state(contact, 'off') }}
                       {% endif %}
                 sequence:
                   - choose:
@@ -330,8 +330,8 @@ actions:
         data:
           name: 'Smart Door Auto-Lock'
           message: >-
-            Trigger={{ _dbg_trigger }} | Door={{ door_position }}
-            | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+            Trigger={{ _dbg_trigger }} | Position={{ door_position }}
+            | Lock={{ lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
             | Night Auto Lock={{ auto_lock_dt }} --> NOOP
           entity_id: !input contact_entity
 
@@ -340,7 +340,7 @@ actions:
         data:
           name: 'Smart Door Auto-Lock'
           message: >-
-            Trigger={{ _dbg_trigger }} | Door={{ door_position }}
-            | Lock={{ _dbg_lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
+            Trigger={{ _dbg_trigger }} | Position={{ door_position }}
+            | Lock={{ lock_state }} | Presence={{ presence_state }} | Override={{ override_state }}
             | Night Auto Lock={{ auto_lock_dt }} --> NOOP
           entity_id: !input lock_entity
