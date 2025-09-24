@@ -46,19 +46,13 @@ blueprint:
       selector:
         text: {}
 
-    door_closed_for:
-      name: Door closed for (delay)
-      default: '00:02:00'
-      selector:
-        duration: {}
-
     away_for:
       name: Away for (grace)
       default: '00:05:00'
       selector:
         duration: {}
 
-    close_stable_for:
+    door_closed_for:
       name: Closed stability time
       default: '00:00:15'
       selector:
@@ -104,18 +98,16 @@ variables:
   override_state: '{{ states(override) }}'
 
 triggers:
-  # Door closed long enough
-  - id: door_closed_off
-    trigger: state
-    entity_id: !input contact_entity
-    to: 'off'
-    for: !input door_closed_for
-
-  - id: door_closed_on
+  # Door position changed (open/close), and held for enough time
+  - id: door_state_to_on
     trigger: state
     entity_id: !input contact_entity
     to: 'on'
-    for: !input door_closed_for
+
+  - id: door_state_to_off
+    trigger: state
+    entity_id: !input contact_entity
+    to: 'off'
 
   # Presence away long enough
   - id: away
@@ -206,9 +198,8 @@ actions:
             id: override_changed
           - condition: template
             value_template: "{{ override_state == 'off' }}" # should be OFF due to above
-          - condition: state
-            entity_id: !input lock_entity
-            state: 'unlocked'
+          - condition: template
+            value_template: "{{ lock_state == 'unlocked' }}"
           - condition: template
             value_template: "{{ door_position == 'closed' }}"
         sequence:
@@ -225,23 +216,17 @@ actions:
                   - condition: template
                     value_template: '{{ contact_open_is_on | bool }}'
                   - condition: trigger
-                    id: door_closed_off
+                    id: door_state_to_off
               - condition: and
                 conditions:
                   - condition: template
                     value_template: '{{ not (contact_open_is_on | bool) }}'
                   - condition: trigger
-                    id: door_closed_on
-          - condition: state
-            entity_id: !input lock_entity
-            state: 'unlocked'
+                    id: door_state_to_on
           - condition: template
-            value_template: >
-              {% if contact_open_is_on | bool %}
-                {{ is_state(contact, 'off') }}
-              {% else %}
-                {{ is_state(contact, 'on') }}
-              {% endif %}
+            value_template: "{{ lock_state == 'unlocked' }}"
+          - condition: template
+            value_template: "{{ door_position == 'closed' }}"
         sequence:
           - delay: !input grace_before_lock
           - action: 'lock.lock'
@@ -252,20 +237,14 @@ actions:
       - conditions:
           - condition: trigger
             id: away
-          - condition: state
-            entity_id: !input lock_entity
-            state: 'unlocked'
+          - condition: template
+            value_template: "{{ lock_state == 'unlocked' }}"
         sequence:
           # If door open, wait for closed (stable) up to timeout
           - choose:
               - conditions:
                   - condition: template
-                    value_template: >
-                      {% if contact_open_is_on | bool %}
-                        {{ is_state(contact, 'on') }}
-                      {% else %}
-                        {{ is_state(contact, 'off') }}
-                      {% endif %}
+                    value_template: "{{ door_position == 'open' }}"
                 sequence:
                   - choose:
                       - conditions:
@@ -276,7 +255,7 @@ actions:
                               - trigger: state
                                 entity_id: !input contact_entity
                                 to: 'off'
-                                for: !input close_stable_for
+                                for: !input door_closed_for
                             timeout: !input away_wait_timeout
                             continue_on_timeout: true
                       - conditions:
@@ -287,7 +266,7 @@ actions:
                               - trigger: state
                                 entity_id: !input contact_entity
                                 to: 'on'
-                                for: !input close_stable_for
+                                for: !input door_closed_for
                             timeout: !input away_wait_timeout
                             continue_on_timeout: true
 
@@ -313,11 +292,10 @@ actions:
       - conditions:
           - condition: trigger
             id: night_auto_lock
-          - condition: state
-            entity_id: !input lock_entity
-            state: 'unlocked'
           - condition: template
-            value_template: "{{ door_position == 'open' }}"
+            value_template: "{{ lock_state == 'unlocked' }}"
+          - condition: template
+            value_template: "{{ door_position == 'closed' }}"
         sequence:
           - action: 'lock.lock'
             target:
