@@ -1,13 +1,11 @@
 blueprint:
-  name: Lights controller
-  description: >
-    Turns on a light group when a door opens, motion is detected or a
-    button is pressed, starts a configurable timer, and turns everything
-    off when the timer ends or a “bottom-button-single-press” event is
-    received.  Double-presses of the top/bottom buttons toggle a bypass
-    boolean.  All entities are supplied as inputs so the same blueprint
-    can be reused for any room or floor.
-
+  name: Generic lights controller with optional bypass
+  description: |
+    Fully parametrised automation that turns a group of lights on when a
+    door opens, motion is detected, or a button is pressed.  It starts a
+    configurable timer (default 5 min) and turns the lights off when the
+    timer expires, unless a bypass `input_boolean` is set to *on*.  Double-presses
+    of the top/bottom buttons toggle the bypass.
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
@@ -37,10 +35,10 @@ blueprint:
         entity:
           domain: timer
 
-    timer_duration:
-      name: Timer duration
+    timer_reset_duration:
+      name: Timer reset duration
       description: How long the timer should run after each activation.
-      default: "00:20:00"
+      default: "00:05:00" # 5 minutes by default
       selector:
         text:
 
@@ -140,7 +138,7 @@ trigger:
     to: KeyPressed2x
     id: bottom_button_pressed_2x
 
-condition: [] # No global conditions – all branching is handled in actions
+condition: [] # No global conditions – branching is handled in actions
 
 action:
   - choose:
@@ -151,13 +149,13 @@ action:
         sequence: &turn_on_sequence
           - service: timer.start
             data:
-              duration: "{{ timer_duration }}"
+              duration: "{{ timer_reset_duration }}" # <-- uses new input
             target:
               entity_id: !input timer_entity
           - service: light.turn_on
             target:
               entity_id: !input light_group
-          # Set white-temp devices
+          # White-temperature devices
           - repeat:
               count: "{{ white_device_ids | length }}"
               sequence:
@@ -167,7 +165,7 @@ action:
                     brightness_pct: 100
                   target:
                     device_id: "{{ white_device_ids[repeat.index] }}"
-          # Set RGB devices
+          # RGB devices
           - repeat:
               count: "{{ rgb_device_ids | length }}"
               sequence:
@@ -225,7 +223,6 @@ action:
           - condition: trigger
             id: motion_timer_ended
         sequence:
-          # Only turn lights off when bypass is NOT on
           - choose:
               - conditions:
                   - condition: state
