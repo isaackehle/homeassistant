@@ -1,0 +1,233 @@
+blueprint:
+  name: Lights controller
+  description: >
+    Turns on a light group when a door opens, motion is detected or a
+    button is pressed, starts a configurable timer, and turns everything
+    off when the timer ends or a “bottom-button-single-press” event is
+    received.  Double-presses of the top/bottom buttons toggle a bypass
+    boolean.  All entities are supplied as inputs so the same blueprint
+    can be reused for any room or floor.
+
+  domain: automation
+  source_url: https://github.com/your-repo/blueprints   # optional
+
+  input:
+    # ── Sensors ────────────────────────────────────────
+    door_sensors:
+      name: Door sensors
+      description: List of binary sensors that indicate a door/opening.
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+
+    motion_sensors:
+      name: Motion sensors
+      description: List of binary sensors that indicate motion.
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+
+    # ── Timer ──────────────────────────────────────────
+    timer_entity:
+      name: Motion timer
+      description: Timer that keeps the lights on after the last trigger.
+      selector:
+        entity:
+          domain: timer
+
+    timer_duration:
+      name: Timer duration
+      description: How long the timer should run after each activation.
+      default: "00:20:00"
+      selector:
+        text:
+
+    # ── Lights ─────────────────────────────────────────
+    light_group:
+      name: Light group
+      description: Group (or list) of lights that should be turned on/off.
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+    white_device_ids:
+      name: White-temperature devices
+      description: Device IDs that should be set to 6500 K, 100 % brightness.
+      selector:
+        device:
+          integration: zigbee|zha|zwave|mqtt|...   # adjust as needed
+          multiple: true
+
+    rgb_device_ids:
+      name: RGB devices
+      description: Device IDs that should be set to pure white (RGB 255-255-255) at 100 % brightness.
+      selector:
+        device:
+          integration: zigbee|zha|zwave|mqtt|...
+          multiple: true
+
+    # ── Button events ───────────────────────────────────
+    top_button_events:
+      name: Top-button event entities
+      description: Event entities that fire when the top button is pressed.
+      selector:
+        entity:
+          domain: event
+          multiple: true
+
+    bottom_button_events:
+      name: Bottom-button event entities
+      description: Event entities that fire when the bottom button is pressed.
+      selector:
+        entity:
+          domain: event
+          multiple: true
+
+    # ── Bypass boolean ─────────────────────────────────
+    bypass_boolean:
+      name: Presence-bypass switch
+      description: Input Boolean toggled by double-presses.
+      selector:
+        entity:
+          domain: input_boolean
+
+trigger:
+  # Door opened -------------------------------------------------
+  - platform: state
+    entity_id: !input door_sensors
+    id: door_opened
+
+  # Motion detected ---------------------------------------------
+  - platform: state
+    entity_id: !input motion_sensors
+    id: motion_detected
+
+  # Timer reaches idle (i.e. expires) -------------------------
+  - platform: state
+    entity_id: !input timer_entity
+    from: "*"
+    to: idle
+    id: motion_timer_ended
+
+  # Top-button single press ------------------------------------
+  - platform: state
+    entity_id: !input top_button_events
+    attribute: event_type
+    to: KeyPressed
+    id: top_button_pressed_1x
+
+  # Top-button double press ------------------------------------
+  - platform: state
+    entity_id: !input top_button_events
+    attribute: event_type
+    to: KeyPressed2x
+    id: top_button_pressed_2x
+
+  # Bottom-button single press ---------------------------------
+  - platform: state
+    entity_id: !input bottom_button_events
+    attribute: event_type
+    to: KeyPressed
+    id: bottom_button_pressed_1x
+
+  # Bottom-button double press ---------------------------------
+  - platform: state
+    entity_id: !input bottom_button_events
+    attribute: event_type
+    to: KeyPressed2x
+    id: bottom_button_pressed_2x
+
+condition: []   # No extra conditions – all logic lives in the actions
+
+action:
+  - choose:
+      # ── Door opened ───────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: door_opened
+        sequence:
+          - service: timer.start
+            data:
+              duration: "{{ timer_duration }}"
+            target:
+              entity_id: !input timer_entity
+          - service: light.turn_on
+            target:
+              entity_id: !input light_group
+          - service: light.turn_on
+            data:
+              color_temp_kelvin: 6500
+              brightness_pct: 100
+            target:
+              device_id: "{{ white_device_ids | first }}"   # apply to each device
+          - repeat:
+              count: "{{ white_device_ids | length - 1 }}"
+              sequence:
+                - service: light.turn_on
+                  data:
+                    color_temp_kelvin: 6500
+                    brightness_pct: 100
+                  target:
+                    device_id: "{{ white_device_ids[repeat.index] }}"
+          - service: light.turn_on
+            data:
+              rgb_color: [255, 255, 255]
+              brightness_pct: 100
+            target:
+              device_id: "{{ rgb_device_ids | first }}"
+          - repeat:
+              count: "{{ rgb_device_ids | length - 1 }}"
+              sequence:
+                - service: light.turn_on
+                  data:
+                    rgb_color: [255, 255, 255]
+                    brightness_pct: 100
+                  target:
+                    device_id: "{{ rgb_device_ids[repeat.index] }}"
+
+      # ── Motion detected ───────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: motion_detected
+        sequence: *same_as_above   # reuse the same block (see note below)
+
+      # ── Top-button single press ───────────────────────────
+      - conditions:
+          - condition: trigger
+            id: top_button_pressed_1x
+        sequence: *same_as_above   # identical to door/motion handling
+
+      # ── Bottom-button single press (turn lights off) ───────
+      - conditions:
+          - condition: trigger
+            id: bottom_button_pressed_1x
+        sequence:
+          - service: timer.cancel
+            target:
+              entity_id: !input timer_entity
+          - service: light.turn_off
+            target:
+              entity_id: !input light_group
+
+      # ── Top-button double press (bypass on) ───────────────
+      - conditions:
+          - condition: trigger
+            id: top_button_pressed_2x
+        sequence:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Bottom-button double press (bypass off) ───────────
+      - conditions:
+          - condition: trigger
+            id: bottom_button_pressed_2x
+        sequence:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: !input bypass_boolean
+
+mode: single
