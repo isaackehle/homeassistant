@@ -6,6 +6,8 @@ blueprint:
     When override turns OFF and the door is closed & unlocked, lock immediately.
     Includes per-run debug: traces + system_log + logbook snapshot.
   domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
+
   input:
     lock_entity:
       name: Lock
