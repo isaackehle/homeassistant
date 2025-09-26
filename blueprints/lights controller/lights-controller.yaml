@@ -9,13 +9,13 @@ blueprint:
     can be reused for any room or floor.
 
   domain: automation
-  source_url: https://github.com/isaackehle/homeassistant/blueprints   # optional
+  source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
   input:
     # ── Sensors ────────────────────────────────────────
     door_sensors:
       name: Door sensors
-      description: List of binary sensors that indicate a door/opening.
+      description: Binary sensors that indicate a door opening.
       selector:
         entity:
           domain: binary_sensor
@@ -23,7 +23,7 @@ blueprint:
 
     motion_sensors:
       name: Motion sensors
-      description: List of binary sensors that indicate motion.
+      description: Binary sensors that indicate motion.
       selector:
         entity:
           domain: binary_sensor
@@ -55,15 +55,15 @@ blueprint:
 
     white_device_ids:
       name: White-temperature devices
-      description: Device IDs that should be set to 6500 K, 100 % brightness.
+      description: Devices that should be set to 6500 K, 100 % brightness.
       selector:
         device:
-          integration: zigbee|zha|zwave|mqtt|...   # adjust as needed
+          integration: zigbee|zha|zwave|mqtt|...
           multiple: true
 
     rgb_device_ids:
       name: RGB devices
-      description: Device IDs that should be set to pure white (RGB 255-255-255) at 100 % brightness.
+      description: Devices that should be set to pure white (RGB 255-255-255) at 100 % brightness.
       selector:
         device:
           integration: zigbee|zha|zwave|mqtt|...
@@ -89,7 +89,7 @@ blueprint:
     # ── Bypass boolean ─────────────────────────────────
     bypass_boolean:
       name: Presence-bypass switch
-      description: Input Boolean toggled by double-presses.
+      description: Input Boolean toggled by double-presses; prevents auto-off when on.
       selector:
         entity:
           domain: input_boolean
@@ -105,7 +105,7 @@ trigger:
     entity_id: !input motion_sensors
     id: motion_detected
 
-  # Timer reaches idle (i.e. expires) -------------------------
+  # Timer reaches idle (expires) -------------------------------
   - platform: state
     entity_id: !input timer_entity
     from: "*"
@@ -140,7 +140,7 @@ trigger:
     to: KeyPressed2x
     id: bottom_button_pressed_2x
 
-condition: []   # No extra conditions – all logic lives in the actions
+condition: [] # No global conditions – all branching is handled in actions
 
 action:
   - choose:
@@ -148,7 +148,7 @@ action:
       - conditions:
           - condition: trigger
             id: door_opened
-        sequence:
+        sequence: &turn_on_sequence
           - service: timer.start
             data:
               duration: "{{ timer_duration }}"
@@ -157,14 +157,9 @@ action:
           - service: light.turn_on
             target:
               entity_id: !input light_group
-          - service: light.turn_on
-            data:
-              color_temp_kelvin: 6500
-              brightness_pct: 100
-            target:
-              device_id: "{{ white_device_ids | first }}"   # apply to each device
+          # Set white-temp devices
           - repeat:
-              count: "{{ white_device_ids | length - 1 }}"
+              count: "{{ white_device_ids | length }}"
               sequence:
                 - service: light.turn_on
                   data:
@@ -172,14 +167,9 @@ action:
                     brightness_pct: 100
                   target:
                     device_id: "{{ white_device_ids[repeat.index] }}"
-          - service: light.turn_on
-            data:
-              rgb_color: [255, 255, 255]
-              brightness_pct: 100
-            target:
-              device_id: "{{ rgb_device_ids | first }}"
+          # Set RGB devices
           - repeat:
-              count: "{{ rgb_device_ids | length - 1 }}"
+              count: "{{ rgb_device_ids | length }}"
               sequence:
                 - service: light.turn_on
                   data:
@@ -192,13 +182,13 @@ action:
       - conditions:
           - condition: trigger
             id: motion_detected
-        sequence: *same_as_above   # reuse the same block (see note below)
+        sequence: *turn_on_sequence
 
       # ── Top-button single press ───────────────────────────
       - conditions:
           - condition: trigger
             id: top_button_pressed_1x
-        sequence: *same_as_above   # identical to door/motion handling
+        sequence: *turn_on_sequence
 
       # ── Bottom-button single press (turn lights off) ───────
       - conditions:
@@ -229,5 +219,22 @@ action:
           - service: input_boolean.turn_off
             target:
               entity_id: !input bypass_boolean
+
+      # ── Timer expired (respect bypass) ─────────────────────
+      - conditions:
+          - condition: trigger
+            id: motion_timer_ended
+        sequence:
+          # Only turn lights off when bypass is NOT on
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input bypass_boolean
+                    state: "off"
+                sequence:
+                  - service: light.turn_off
+                    target:
+                      entity_id: !input light_group
+            default: [] # If bypass is on, do nothing
 
 mode: single
