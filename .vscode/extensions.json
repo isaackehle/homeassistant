@@ -2,6 +2,8 @@
   "recommendations": [
     "keesschollaart.vscode-home-assistant",
     "mhutchie.git-graph",
-    "github.copilot-chat"
+    "github.copilot-chat",
+    "johnpapa.vscode-peacock",
+    "natqe.reload"
   ]
 }
