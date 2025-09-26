@@ -1,5 +1,8 @@
 {
   "editor.formatOnPaste": false,
   "editor.formatOnSave": true,
-  "yaml.format.printWidth": 150
+  "yaml.format.printWidth": 150,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  }
 }
