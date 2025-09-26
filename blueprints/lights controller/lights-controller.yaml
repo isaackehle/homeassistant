@@ -9,7 +9,7 @@ blueprint:
     can be reused for any room or floor.
 
   domain: automation
-  source_url: https://github.com/your-repo/blueprints   # optional
+  source_url: https://github.com/isaackehle/homeassistant/blueprints   # optional
 
   input:
     # ── Sensors ────────────────────────────────────────
