@@ -79,7 +79,7 @@ blueprint:
       default: [] # ← optional
       selector:
         device:
-          integration: zigbee|zha|zwave|mqtt|...
+          # integration: zigbee|zha|zwave|mqtt|...
           multiple: true
 
     # ── Devices that need pure-white RGB setting ────────
@@ -89,7 +89,7 @@ blueprint:
       default: [] # ← optional
       selector:
         device:
-          integration: zigbee|zha|zwave|mqtt|...
+          # integration: zigbee|zha|zwave|mqtt|...
           multiple: true
 
     # ── Button events ───────────────────────────────────
@@ -126,48 +126,48 @@ blueprint:
 
 trigger:
   # Door opened -------------------------------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input door_sensors
     to: 'on'
     from: 'off'
     id: door_opened
 
   # Motion detected (any of the listed sensors) ---------------
-  - platform: state
+  - trigger: state
     entity_id: !input motion_sensors
     to: 'on'
     id: motion_detected
 
   # Timer becomes idle (i.e. expires) -------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input timer_entity
     from: '*'
     to: idle
     id: motion_timer_ended
 
   # Top-button single press ------------------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
     to: KeyPressed
     id: top_button_pressed_1x
 
   # Top-button double press ------------------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
     to: KeyPressed2x
     id: top_button_pressed_2x
 
   # Bottom-button single press ---------------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
     to: KeyPressed
     id: bottom_button_pressed_1x
 
   # Bottom-button double press ---------------------------------
-  - platform: state
+  - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
     to: KeyPressed2x
@@ -182,19 +182,19 @@ action:
           - condition: trigger
             id: door_opened
         sequence: &activate_sequence
-          - service: timer.start
+          - action: timer.start
             data:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          - service: light.turn_on
+          - action: light.turn_on
             target:
               entity_id: !input primary_light_group
           # White-temperature devices (optional)
           - repeat:
               count: '{{ white_device_ids | length }}'
               sequence:
-                - service: light.turn_on
+                - action: light.turn_on
                   data:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
@@ -204,7 +204,7 @@ action:
           - repeat:
               count: '{{ rgb_device_ids | length }}'
               sequence:
-                - service: light.turn_on
+                - action: light.turn_on
                   data:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
@@ -228,10 +228,10 @@ action:
           - condition: trigger
             id: bottom_button_pressed_1x
         sequence:
-          - service: timer.cancel
+          - action: timer.cancel
             target:
               entity_id: !input timer_entity
-          - service: light.turn_off
+          - action: light.turn_off
             target:
               entity_id: >-
                 {{ [primary_light_group] + extra_light_groups }}
@@ -243,7 +243,7 @@ action:
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - service: input_boolean.turn_on
+          - action: input_boolean.turn_on
             target:
               entity_id: !input bypass_boolean
 
@@ -254,7 +254,7 @@ action:
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - service: input_boolean.turn_off
+          - action: input_boolean.turn_off
             target:
               entity_id: !input bypass_boolean
 
@@ -268,7 +268,7 @@ action:
             value_template: >-
               {{ (bypass_boolean == '') or (states(bypass_boolean) == 'off') }}
         sequence:
-          - service: light.turn_off
+          - action: light.turn_off
             target:
               entity_id: >-
                 {{ [primary_light_group] + extra_light_groups }}
