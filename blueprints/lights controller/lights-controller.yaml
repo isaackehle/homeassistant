@@ -1,6 +1,15 @@
 blueprint:
   name: Room-style lights controller
-  description: This blueprint gives a robust, configurable lighting automation that reacts to doors, motion, and button presses, enforces a timeout, and optionally lets you override the timeout with a user-controlled bypass flag—all without hard-coding any entity IDs.
+  description: |
+    • Reacts to doors, motion, button presses, and a timer.
+    • Optional bypass flag (input_boolean) that can be toggled by double-tap
+      events or by a dedicated *sensor-action* array.
+    • The *sensor-action* array watches any number of entities whose
+      state can be “single”, “double”, “unknown” or “unavailable”.
+      - “single”  → enable bypass (turn ON the bypass boolean)
+      - “double”  → disable bypass (turn OFF the bypass boolean)
+      - other states are ignored.
+    • All steps use the modern `action:` syntax.
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
@@ -23,6 +32,20 @@ blueprint:
         entity:
           filter:
             domain: binary_sensor
+          multiple: true
+
+    # ── Sensor-action array ────────────────────────────────
+    sensor_actions:
+      name: Sensor-action array
+      description: |
+        List of entities whose state can be “single”, “double”, “unknown”
+        or “unavailable”.  Changing to “single” enables the bypass,
+        changing to “double” disables it.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: sensor
           multiple: true
 
     # ── Timer ──────────────────────────────────────────
@@ -106,9 +129,10 @@ blueprint:
       name: Bypass helper
       description: |
         Optional `input_boolean` that stores the bypass flag.
-        If you leave this empty the automation will simply ignore the
-        bypass feature.  When supplied, double-tap-up/down will toggle it.
-      default: '' # empty string = “not supplied”
+        If left empty the automation will ignore bypass logic.
+        When supplied, double-tap events and sensor-action changes
+        will toggle this helper.
+      default: '' # empty = “not supplied”
       selector:
         entity:
           filter:
@@ -141,30 +165,42 @@ trigger:
     entity_id: !input top_button_events
     attribute: event_type
     to: KeyPressed
-    id: top_button_pressed_1x
+    id: top_button_single
 
-  # Top-button double press (toggle bypass) -------------------
+  # Top-button double press → enable bypass -------------------
   - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
     to: KeyPressed2x
-    id: top_button_pressed_2x
+    id: top_button_double
 
   # Bottom-button single press ---------------------------------
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
     to: KeyPressed
-    id: bottom_button_pressed_1x
+    id: bottom_button_single
 
-  # Bottom-button double press (toggle bypass) ----------------
+  # Bottom-button double press → disable bypass ----------------
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
     to: KeyPressed2x
-    id: bottom_button_pressed_2x
+    id: bottom_button_double
 
-condition: [] # No global conditions – each branch handles its own logic
+  # ── Sensor-action array single -> enable bypass ---------------------------
+  - trigger: state
+    entity_id: !input sensor_actions
+    to: 'single'
+    id: sensor_action_single
+
+  # ── Sensor-action array double -> disable bypass ---------------------------
+  - trigger: state
+    entity_id: !input sensor_actions
+    to: 'double'
+    id: sensor_action_double
+
+condition: [] # No global conditions - each branch decides its own flow
 
 action:
   - choose:
@@ -208,16 +244,16 @@ action:
             id: motion_detected
         sequence: *activate_sequence
 
-      # ── Top-button single press (same as door/motion) ───────
+      # ── Top-button single press → (same as door/motion) ───────
       - conditions:
           - condition: trigger
-            id: top_button_pressed_1x
+            id: top_button_single
         sequence: *activate_sequence
 
-      # ── Bottom-button single press – turn everything off ───
+      # ── Bottom-button single press → turn everything off ───
       - conditions:
           - condition: trigger
-            id: bottom_button_pressed_1x
+            id: bottom_button_single
         sequence:
           - action: timer.cancel
             target:
@@ -227,10 +263,10 @@ action:
               entity_id: >-
                 {{ (primary_light_group + extra_light_groups) | join(',') }}
 
-      # ── Top-button double press – toggle bypass (if supplied) ───
+      # ── Top-button double press → toggle bypass (if supplied) ───
       - conditions:
           - condition: trigger
-            id: top_button_pressed_2x
+            id: top_button_double
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
@@ -238,10 +274,10 @@ action:
             target:
               entity_id: !input bypass_boolean
 
-      # ── Bottom-button double press – toggle bypass (if supplied) ─
+      # ── Bottom-button double press → toggle bypass (if supplied) ─
       - conditions:
           - condition: trigger
-            id: bottom_button_pressed_2x
+            id: bottom_button_double
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
@@ -249,12 +285,34 @@ action:
             target:
               entity_id: !input bypass_boolean
 
-      # ── Timer reached idle – turn lights off unless bypass is on ─────────────────
+      # ── Sensor-action: single → enable bypass ─────────────────────
+      - conditions:
+          - condition: trigger
+            id: sensor_action_single
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
+        sequence:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Sensor-action: double → disable bypass ────────────────────
+      - conditions:
+          - condition: trigger
+            id: sensor_action_double
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Timer reached idle - turn lights off unless bypass is on ─────────────────
       - conditions:
           - condition: trigger
             id: motion_timer_ended
           # If a bypass helper was supplied we honour its state;
-          # otherwise we treat it as “off” (i.e. we always turn lights off).
+          # otherwise we always turn the lights off.
           - condition: template
             value_template: >-
               {% if bypass_boolean == '' %}
