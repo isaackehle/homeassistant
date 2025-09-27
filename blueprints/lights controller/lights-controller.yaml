@@ -28,7 +28,7 @@ blueprint:
     motion_sensors:
       name: Motion sensors
       description: Binary sensors that indicate occupancy or motion.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         entity:
           filter:
@@ -65,7 +65,7 @@ blueprint:
     extra_light_groups:
       name: Additional light groups
       description: Optional extra groups (colour bulbs, LED strips) that are turned off when the timer ends or a bottom-button single press occurs.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         entity:
           filter:
@@ -76,27 +76,25 @@ blueprint:
     white_device_ids:
       name: White-temperature devices
       description: Device IDs that should be set to 6500 K, 100 % brightness.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         device:
-          # integration: zigbee|zha|zwave|mqtt|...
-          multiple: true
+          multiple: true # any integration works
 
     # ── Devices that need pure-white RGB setting ────────
     rgb_device_ids:
       name: RGB devices
       description: Device IDs that should be set to RGB 255-255-255, 100 % brightness.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         device:
-          # integration: zigbee|zha|zwave|mqtt|...
-          multiple: true
+          multiple: true # any integration works
 
     # ── Button events ───────────────────────────────────
     top_button_events:
       name: Top-button event entities
       description: Event entities that fire when a “top” button is pressed.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         entity:
           filter:
@@ -106,7 +104,7 @@ blueprint:
     bottom_button_events:
       name: Bottom-button event entities
       description: Event entities that fire when a “bottom” button is pressed.
-      default: [] # ← optional
+      default: [] # optional
       selector:
         entity:
           filter:
@@ -117,7 +115,7 @@ blueprint:
     bypass_boolean:
       name: Presence-bypass switch
       description: Input Boolean toggled by double-presses of the buttons.
-      default: '' # ← optional (empty string = not supplied)
+      default: '' # optional (empty string = not supplied)
       selector:
         entity:
           filter:
@@ -232,11 +230,11 @@ action:
             target:
               entity_id: !input timer_entity
           - action: light.turn_off
-            target:
+            data:
               entity_id: >-
-                {{ [primary_light_group] + extra_light_groups }}
+                {{ (primary_light_group + extra_light_groups) | join(',') }}
 
-      # ── Top-button double press – bypass on ─────────────────
+      # ── Top-button double press – bypass on (optional) ───────
       - conditions:
           - condition: trigger
             id: top_button_pressed_2x
@@ -269,8 +267,8 @@ action:
               {{ (bypass_boolean == '') or (states(bypass_boolean) == 'off') }}
         sequence:
           - action: light.turn_off
-            target:
+            data:
               entity_id: >-
-                {{ [primary_light_group] + extra_light_groups }}
+                {{ (primary_light_group + extra_light_groups) | join(',') }}
 
 mode: single
