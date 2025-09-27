@@ -1,16 +1,17 @@
 blueprint:
-  name: Room-style lights controller (optional inputs)
+  name: Room-style lights controller
   description: |
     Generic version of the original “basement lights controller”.
     All entities are exposed as inputs and the following inputs are optional:
     - bottom_button_events
-    - bypass_boolean
     - extra_light_groups
     - motion_sensors
     - rgb_device_ids
     - top_button_events
     - white_device_ids
-    The timer-reset input is called **timer_reset_duration**.
+    - bypass_internal - bypass flag is stored in an internal helper (`input_boolean.bypass_internal`)
+    - timer_reset_duration - The timer-reset input
+
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
@@ -111,11 +112,14 @@ blueprint:
             domain: event
           multiple: true
 
-    # ── Bypass boolean ─────────────────────────────────
-    bypass_boolean:
-      name: Presence-bypass switch
-      description: Input Boolean toggled by double-presses of the buttons.
-      default: '' # optional (empty string = not supplied)
+    # ── Internal bypass helper (no user input) ───────────
+    internal_bypass:
+      name: Internal bypass helper
+      description: >
+        The entity that stores the bypass flag internally.
+        Must be an existing `input_boolean` with the exact entity_id
+        `input_boolean.bypass_internal`.  It is **not** exposed to the user.
+      default: input_boolean.bypass_internal
       selector:
         entity:
           filter:
@@ -150,7 +154,7 @@ trigger:
     to: KeyPressed
     id: top_button_pressed_1x
 
-  # Top-button double press ------------------------------------
+  # Top-button double press (toggle bypass) -------------------
   - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
@@ -164,7 +168,7 @@ trigger:
     to: KeyPressed
     id: bottom_button_pressed_1x
 
-  # Bottom-button double press ---------------------------------
+  # Bottom-button double press (toggle bypass) ----------------
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
@@ -234,37 +238,33 @@ action:
               entity_id: >-
                 {{ (primary_light_group + extra_light_groups) | join(',') }}
 
-      # ── Top-button double press – bypass on (optional) ───────
+      # ── Top-button double press – toggle internal bypass ───
       - conditions:
           - condition: trigger
             id: top_button_pressed_2x
-          - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - action: input_boolean.turn_on
+          - action: input_boolean.toggle
             target:
-              entity_id: !input bypass_boolean
+              entity_id: !input internal_bypass
 
-      # ── Bottom-button double press – bypass off (optional) ──
+      # ── Bottom-button double press – toggle internal bypass ─
       - conditions:
           - condition: trigger
             id: bottom_button_pressed_2x
-          - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - action: input_boolean.turn_off
+          - action: input_boolean.toggle
             target:
-              entity_id: !input bypass_boolean
+              entity_id: !input internal_bypass
 
       # ── Timer reached idle – turn lights off unless bypass is on ─────────────────
       - conditions:
           - condition: trigger
             id: motion_timer_ended
           - condition: template
-            # If no bypass_boolean is supplied we treat it as “off”.
-            # If it is supplied we only act when its state is off.
+            # If the internal bypass is **off**, we turn the lights off.
+            # If it is **on**, we do nothing (lights stay on).
             value_template: >-
-              {{ (bypass_boolean == '') or (states(bypass_boolean) == 'off') }}
+              {{ states(internal_bypass) == 'off' }}
         sequence:
           - action: light.turn_off
             data:
