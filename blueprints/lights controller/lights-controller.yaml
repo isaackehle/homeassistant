@@ -1,17 +1,6 @@
 blueprint:
   name: Room-style lights controller
-  description: |
-    Generic version of the original “basement lights controller”.
-    All entities are exposed as inputs and the following inputs are optional:
-    - bottom_button_events
-    - extra_light_groups
-    - motion_sensors
-    - rgb_device_ids
-    - top_button_events
-    - white_device_ids
-    - bypass_internal - bypass flag is stored in an internal helper (`input_boolean.bypass_internal`)
-    - timer_reset_duration - The timer-reset input
-
+  description: This blueprint gives a robust, configurable lighting automation that reacts to doors, motion, and button presses, enforces a timeout, and optionally lets you override the timeout with a user-controlled bypass flag—all without hard-coding any entity IDs.
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
@@ -112,14 +101,14 @@ blueprint:
             domain: event
           multiple: true
 
-    # ── Internal bypass helper (no user input) ───────────
-    internal_bypass:
-      name: Internal bypass helper
-      description: >
-        The entity that stores the bypass flag internally.
-        Must be an existing `input_boolean` with the exact entity_id
-        `input_boolean.bypass_internal`.  It is **not** exposed to the user.
-      default: input_boolean.bypass_internal
+    # ── Bypass helper (optional) ───────────────────────
+    bypass_boolean:
+      name: Bypass helper
+      description: |
+        Optional `input_boolean` that stores the bypass flag.
+        If you leave this empty the automation will simply ignore the
+        bypass feature.  When supplied, double-tap-up/down will toggle it.
+      default: '' # empty string = “not supplied”
       selector:
         entity:
           filter:
@@ -238,33 +227,41 @@ action:
               entity_id: >-
                 {{ (primary_light_group + extra_light_groups) | join(',') }}
 
-      # ── Top-button double press – toggle internal bypass ───
+      # ── Top-button double press – toggle bypass (if supplied) ───
       - conditions:
           - condition: trigger
             id: top_button_pressed_2x
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
         sequence:
           - action: input_boolean.toggle
             target:
-              entity_id: !input internal_bypass
+              entity_id: !input bypass_boolean
 
-      # ── Bottom-button double press – toggle internal bypass ─
+      # ── Bottom-button double press – toggle bypass (if supplied) ─
       - conditions:
           - condition: trigger
             id: bottom_button_pressed_2x
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
         sequence:
           - action: input_boolean.toggle
             target:
-              entity_id: !input internal_bypass
+              entity_id: !input bypass_boolean
 
       # ── Timer reached idle – turn lights off unless bypass is on ─────────────────
       - conditions:
           - condition: trigger
             id: motion_timer_ended
+          # If a bypass helper was supplied we honour its state;
+          # otherwise we treat it as “off” (i.e. we always turn lights off).
           - condition: template
-            # If the internal bypass is **off**, we turn the lights off.
-            # If it is **on**, we do nothing (lights stay on).
             value_template: >-
-              {{ states(internal_bypass) == 'off' }}
+              {% if bypass_boolean == '' %}
+                true                     # no bypass helper → proceed
+              {% else %}
+                {{ states(bypass_boolean) == 'off' }}
+              {% endif %}
         sequence:
           - action: light.turn_off
             data:
