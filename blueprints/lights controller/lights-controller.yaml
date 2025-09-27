@@ -1,11 +1,16 @@
 blueprint:
-  name: Generic lights controller with optional bypass
+  name: Room-style lights controller (optional inputs)
   description: |
-    Fully parametrised automation that turns a group of lights on when a
-    door opens, motion is detected, or a button is pressed.  It starts a
-    configurable timer (default 5 min) and turns the lights off when the
-    timer expires, unless a bypass `input_boolean` is set to *on*.  Double-presses
-    of the top/bottom buttons toggle the bypass.
+    Generic version of the original “basement lights controller”.
+    All entities are exposed as inputs and the following inputs are optional:
+    - bottom_button_events
+    - bypass_boolean
+    - extra_light_groups
+    - motion_sensors
+    - rgb_device_ids
+    - top_button_events
+    - white_device_ids
+    The timer-reset input is called **timer_reset_duration**.
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
 
@@ -13,18 +18,21 @@ blueprint:
     # ── Sensors ────────────────────────────────────────
     door_sensors:
       name: Door sensors
-      description: Binary sensors that indicate a door opening.
+      description: Binary sensors that indicate a door (or similar) opening.
       selector:
         entity:
-          domain: binary_sensor
+          filter:
+            domain: binary_sensor
           multiple: true
 
     motion_sensors:
       name: Motion sensors
-      description: Binary sensors that indicate motion.
+      description: Binary sensors that indicate occupancy or motion.
+      default: [] # ← optional
       selector:
         entity:
-          domain: binary_sensor
+          filter:
+            domain: binary_sensor
           multiple: true
 
     # ── Timer ──────────────────────────────────────────
@@ -33,35 +41,52 @@ blueprint:
       description: Timer that keeps the lights on after the last trigger.
       selector:
         entity:
-          domain: timer
+          filter:
+            domain: timer
+          multiple: false
 
     timer_reset_duration:
       name: Timer reset duration
-      description: How long the timer should run after each activation.
-      default: "00:05:00" # 5 minutes by default
+      description: How long the timer should stay active after each trigger.
+      default: '00:20:00'
       selector:
         text:
 
-    # ── Lights ─────────────────────────────────────────
-    light_group:
-      name: Light group
-      description: Group (or list) of lights that should be turned on/off.
+    # ── Light groups ───────────────────────────────────
+    primary_light_group:
+      name: Primary light group
+      description: Main group of lights turned on/off (e.g., ceiling bulbs).
       selector:
         entity:
-          domain: light
+          filter:
+            domain: light
           multiple: true
 
+    extra_light_groups:
+      name: Additional light groups
+      description: Optional extra groups (colour bulbs, LED strips) that are turned off when the timer ends or a bottom-button single press occurs.
+      default: [] # ← optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+
+    # ── Devices that need colour-temp settings ───────────
     white_device_ids:
       name: White-temperature devices
-      description: Devices that should be set to 6500 K, 100 % brightness.
+      description: Device IDs that should be set to 6500 K, 100 % brightness.
+      default: [] # ← optional
       selector:
         device:
           integration: zigbee|zha|zwave|mqtt|...
           multiple: true
 
+    # ── Devices that need pure-white RGB setting ────────
     rgb_device_ids:
       name: RGB devices
-      description: Devices that should be set to pure white (RGB 255-255-255) at 100 % brightness.
+      description: Device IDs that should be set to RGB 255-255-255, 100 % brightness.
+      default: [] # ← optional
       selector:
         device:
           integration: zigbee|zha|zwave|mqtt|...
@@ -70,43 +95,53 @@ blueprint:
     # ── Button events ───────────────────────────────────
     top_button_events:
       name: Top-button event entities
-      description: Event entities that fire when the top button is pressed.
+      description: Event entities that fire when a “top” button is pressed.
+      default: [] # ← optional
       selector:
         entity:
-          domain: event
+          filter:
+            domain: event
           multiple: true
 
     bottom_button_events:
       name: Bottom-button event entities
-      description: Event entities that fire when the bottom button is pressed.
+      description: Event entities that fire when a “bottom” button is pressed.
+      default: [] # ← optional
       selector:
         entity:
-          domain: event
+          filter:
+            domain: event
           multiple: true
 
     # ── Bypass boolean ─────────────────────────────────
     bypass_boolean:
       name: Presence-bypass switch
-      description: Input Boolean toggled by double-presses; prevents auto-off when on.
+      description: Input Boolean toggled by double-presses of the buttons.
+      default: '' # ← optional (empty string = not supplied)
       selector:
         entity:
-          domain: input_boolean
+          filter:
+            domain: input_boolean
+          multiple: false
 
 trigger:
   # Door opened -------------------------------------------------
   - platform: state
     entity_id: !input door_sensors
+    to: 'on'
+    from: 'off'
     id: door_opened
 
-  # Motion detected ---------------------------------------------
+  # Motion detected (any of the listed sensors) ---------------
   - platform: state
     entity_id: !input motion_sensors
+    to: 'on'
     id: motion_detected
 
-  # Timer reaches idle (expires) -------------------------------
+  # Timer becomes idle (i.e. expires) -------------------------
   - platform: state
     entity_id: !input timer_entity
-    from: "*"
+    from: '*'
     to: idle
     id: motion_timer_ended
 
@@ -138,7 +173,7 @@ trigger:
     to: KeyPressed2x
     id: bottom_button_pressed_2x
 
-condition: [] # No global conditions – branching is handled in actions
+condition: [] # No global conditions – each branch handles its own logic
 
 action:
   - choose:
@@ -146,49 +181,49 @@ action:
       - conditions:
           - condition: trigger
             id: door_opened
-        sequence: &turn_on_sequence
+        sequence: &activate_sequence
           - service: timer.start
             data:
-              duration: "{{ timer_reset_duration }}" # <-- uses new input
+              duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
           - service: light.turn_on
             target:
-              entity_id: !input light_group
-          # White-temperature devices
+              entity_id: !input primary_light_group
+          # White-temperature devices (optional)
           - repeat:
-              count: "{{ white_device_ids | length }}"
+              count: '{{ white_device_ids | length }}'
               sequence:
                 - service: light.turn_on
                   data:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: "{{ white_device_ids[repeat.index] }}"
-          # RGB devices
+                    device_id: '{{ white_device_ids[repeat.index] }}'
+          # RGB devices (optional)
           - repeat:
-              count: "{{ rgb_device_ids | length }}"
+              count: '{{ rgb_device_ids | length }}'
               sequence:
                 - service: light.turn_on
                   data:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: "{{ rgb_device_ids[repeat.index] }}"
+                    device_id: '{{ rgb_device_ids[repeat.index] }}'
 
-      # ── Motion detected ───────────────────────────────────
+      # ── Motion detected ─────────────────────────────────--
       - conditions:
           - condition: trigger
             id: motion_detected
-        sequence: *turn_on_sequence
+        sequence: *activate_sequence
 
-      # ── Top-button single press ───────────────────────────
+      # ── Top-button single press (same as door/motion) ───────
       - conditions:
           - condition: trigger
             id: top_button_pressed_1x
-        sequence: *turn_on_sequence
+        sequence: *activate_sequence
 
-      # ── Bottom-button single press (turn lights off) ───────
+      # ── Bottom-button single press – turn everything off ───
       - conditions:
           - condition: trigger
             id: bottom_button_pressed_1x
@@ -198,40 +233,44 @@ action:
               entity_id: !input timer_entity
           - service: light.turn_off
             target:
-              entity_id: !input light_group
+              entity_id: >-
+                {{ [primary_light_group] + extra_light_groups }}
 
-      # ── Top-button double press (bypass on) ───────────────
+      # ── Top-button double press – bypass on ─────────────────
       - conditions:
           - condition: trigger
             id: top_button_pressed_2x
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
         sequence:
           - service: input_boolean.turn_on
             target:
               entity_id: !input bypass_boolean
 
-      # ── Bottom-button double press (bypass off) ───────────
+      # ── Bottom-button double press – bypass off (optional) ──
       - conditions:
           - condition: trigger
             id: bottom_button_pressed_2x
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
         sequence:
           - service: input_boolean.turn_off
             target:
               entity_id: !input bypass_boolean
 
-      # ── Timer expired (respect bypass) ─────────────────────
+      # ── Timer reached idle – turn lights off unless bypass is on ─────────────────
       - conditions:
           - condition: trigger
             id: motion_timer_ended
+          - condition: template
+            # If no bypass_boolean is supplied we treat it as “off”.
+            # If it is supplied we only act when its state is off.
+            value_template: >-
+              {{ (bypass_boolean == '') or (states(bypass_boolean) == 'off') }}
         sequence:
-          - choose:
-              - conditions:
-                  - condition: state
-                    entity_id: !input bypass_boolean
-                    state: "off"
-                sequence:
-                  - service: light.turn_off
-                    target:
-                      entity_id: !input light_group
-            default: [] # If bypass is on, do nothing
+          - service: light.turn_off
+            target:
+              entity_id: >-
+                {{ [primary_light_group] + extra_light_groups }}
 
 mode: single
