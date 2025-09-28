@@ -34,11 +34,11 @@ blueprint:
             domain: binary_sensor
           multiple: true
 
-    # ── Sensor-action array ────────────────────────────────
-    sensor_actions:
-      name: Sensor-action array
+    # ── Action sensors ──────────────
+    action_sensors:
+      name: Action sensors
       description: |
-        List of entities whose state can be “single”, “double”, “unknown”
+        List of sensors whose state can be “single”, “double”, “unknown”
         or “unavailable”.  Changing to “single” enables the bypass,
         changing to “double” disables it.
       default: [] # optional
@@ -188,19 +188,19 @@ trigger:
     to: KeyPressed2x
     id: bottom_button_double
 
-  # ── Sensor-action array single -> enable bypass ---------------------------
+  # Action sensors – single ------------------------------------
   - trigger: state
-    entity_id: !input sensor_actions
+    entity_id: !input action_sensors
     to: 'single'
     id: sensor_action_single
 
-  # ── Sensor-action array double -> disable bypass ---------------------------
+  # Action sensors – double ------------------------------------
   - trigger: state
-    entity_id: !input sensor_actions
+    entity_id: !input action_sensors
     to: 'double'
     id: sensor_action_double
 
-condition: [] # No global conditions - each branch decides its own flow
+condition: [] # No global conditions – each branch decides its own flow
 
 action:
   - choose:
@@ -208,12 +208,19 @@ action:
       - conditions:
           - condition: trigger
             id: door_opened
-        sequence: &activate_sequence
+        sequence:
           - action: timer.start
             data:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
+          # ==== LOG THAT WE JUST RE-STARTED THE TIMER ====
+          - action: system_log.write
+            data:
+              message: >-
+                Timer "{{ timer_entity }}" restarted by trigger
+                "door_opened" – duration {{ timer_reset_duration }}
+              level: info
           - action: light.turn_on
             target:
               entity_id: !input primary_light_group
@@ -242,13 +249,77 @@ action:
       - conditions:
           - condition: trigger
             id: motion_detected
-        sequence: *activate_sequence
+        sequence:
+          - action: timer.start
+            data:
+              duration: '{{ timer_reset_duration }}'
+            target:
+              entity_id: !input timer_entity
+          - action: system_log.write
+            data:
+              message: >-
+                Timer "{{ timer_entity }}" restarted by trigger
+                "motion_detected" – duration {{ timer_reset_duration }}
+              level: info
+          - action: light.turn_on
+            target:
+              entity_id: !input primary_light_group
+          - repeat:
+              count: '{{ white_device_ids | length }}'
+              sequence:
+                - action: light.turn_on
+                  data:
+                    color_temp_kelvin: 6500
+                    brightness_pct: 100
+                  target:
+                    device_id: '{{ white_device_ids[repeat.index] }}'
+          - repeat:
+              count: '{{ rgb_device_ids | length }}'
+              sequence:
+                - action: light.turn_on
+                  data:
+                    rgb_color: [255, 255, 255]
+                    brightness_pct: 100
+                  target:
+                    device_id: '{{ rgb_device_ids[repeat.index] }}'
 
       # ── Top-button single press → (same as door/motion) ───────
       - conditions:
           - condition: trigger
             id: top_button_single
-        sequence: *activate_sequence
+        sequence:
+          - action: timer.start
+            data:
+              duration: '{{ timer_reset_duration }}'
+            target:
+              entity_id: !input timer_entity
+          - action: system_log.write
+            data:
+              message: >-
+                Timer "{{ timer_entity }}" restarted by trigger
+                "top_button_single" – duration {{ timer_reset_duration }}
+              level: info
+          - action: light.turn_on
+            target:
+              entity_id: !input primary_light_group
+          - repeat:
+              count: '{{ white_device_ids | length }}'
+              sequence:
+                - action: light.turn_on
+                  data:
+                    color_temp_kelvin: 6500
+                    brightness_pct: 100
+                  target:
+                    device_id: '{{ white_device_ids[repeat.index] }}'
+          - repeat:
+              count: '{{ rgb_device_ids | length }}'
+              sequence:
+                - action: light.turn_on
+                  data:
+                    rgb_color: [255, 255, 255]
+                    brightness_pct: 100
+                  target:
+                    device_id: '{{ rgb_device_ids[repeat.index] }}'
 
       # ── Bottom-button single press → turn everything off ───
       - conditions:
