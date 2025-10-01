@@ -139,6 +139,16 @@ blueprint:
             domain: input_boolean
           multiple: false
 
+variables:
+  timer_reset_duration: !input timer_reset_duration
+  bypass_boolean: !input bypass_boolean
+  turn_off_lights_when_timer_ends: >-
+    {% if bypass_boolean == '' %}
+      true                     # no bypass helper → always turn off
+    {% else %}
+      {{ states(bypass_boolean) == 'off' }} # bypass helper supplied and off
+    {% endif %}
+
 trigger:
   # Door opened -------------------------------------------------
   - trigger: state
@@ -146,6 +156,13 @@ trigger:
     to: 'on'
     from: 'off'
     id: door_opened
+
+  # Door closed -------------------------------------------------
+  - trigger: state
+    entity_id: !input door_sensors
+    to: 'off'
+    from: 'on'
+    id: door_closed
 
   # Motion detected (any of the listed sensors) ---------------
   - trigger: state
@@ -209,18 +226,15 @@ action:
           - condition: trigger
             id: door_opened
         sequence:
-          - action: timer.start
+          - action: timer.set_duration
             data:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          # ==== LOG THAT WE JUST RE-STARTED THE TIMER ====
-          - action: system_log.write
-            data:
-              message: >-
-                Timer "{{ timer_entity }}" restarted by trigger
-                "door_opened" – duration {{ timer_reset_duration }}
-              level: info
+
+          - action: timer.pause
+            target:
+              entity_id: !input timer_entity
           - action: light.turn_on
             target:
               entity_id: !input primary_light_group
@@ -245,6 +259,17 @@ action:
                   target:
                     device_id: '{{ rgb_device_ids[repeat.index] }}'
 
+      # ── Door closed ───────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: door_closed
+        sequence:
+          - action: timer.start
+            data:
+              duration: '{{ timer_reset_duration }}'
+            target:
+              entity_id: !input timer_entity
+
       # ── Motion detected ─────────────────────────────────--
       - conditions:
           - condition: trigger
@@ -255,12 +280,6 @@ action:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          - action: system_log.write
-            data:
-              message: >-
-                Timer "{{ timer_entity }}" restarted by trigger
-                "motion_detected" – duration {{ timer_reset_duration }}
-              level: info
           - action: light.turn_on
             target:
               entity_id: !input primary_light_group
@@ -293,12 +312,6 @@ action:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          - action: system_log.write
-            data:
-              message: >-
-                Timer "{{ timer_entity }}" restarted by trigger
-                "top_button_single" – duration {{ timer_reset_duration }}
-              level: info
           - action: light.turn_on
             target:
               entity_id: !input primary_light_group
@@ -385,16 +398,31 @@ action:
           # If a bypass helper was supplied we honour its state;
           # otherwise we always turn the lights off.
           - condition: template
-            value_template: >-
-              {% if bypass_boolean == '' %}
-                true                     # no bypass helper → proceed
-              {% else %}
-                {{ states(bypass_boolean) == 'off' }}
-              {% endif %}
+            value_template: '{{ turn_off_lights_when_timer_ends | bool }}'
         sequence:
-          - action: light.turn_off
-            data:
-              entity_id: >-
-                {{ (primary_light_group + extra_light_groups) | join(',') }}
+          - repeat:
+              count: '{{ primary_light_group | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ primary_light_group[repeat.index] }}'
+          - repeat:
+              count: '{{ extra_light_groups | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ extra_light_groups[repeat.index] }}'
+          - repeat:
+              count: '{{ white_device_ids | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ white_device_ids[repeat.index] }}'
+          - repeat:
+              count: '{{ rgb_device_ids | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ rgb_device_ids[repeat.index] }}'
 
 mode: single
