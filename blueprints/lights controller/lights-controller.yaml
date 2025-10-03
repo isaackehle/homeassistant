@@ -230,179 +230,125 @@ action:
           - condition: trigger
             id: door_opened
         sequence:
-          - action: timer.set_duration
-            data:
-              duration: '{{ timer_reset_duration }}'
-            target:
-              entity_id: !input timer_entity
-          - action: timer.pause
-            target:
-              entity_id: !input timer_entity
-
-          - repeat:
-              count: '{{ switches | length }}'
-              sequence:
-                - action: light.turn_on
-                  target:
-                    device_id: '{{ switches[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ dimmers | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ dimmers[repeat.index - 1] }}'
-          # White-temperature devices
-          - repeat:
-              count: '{{ rgbw_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    color_temp_kelvin: 6500
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
-          # RGB devices
-          - repeat:
-              count: '{{ rgb_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    rgb_color: [255, 255, 255]
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
+          - parallel:
+              - alias: Reset and pause the timer
+                sequence:
+                  - action: timer.set_duration
+                    data:
+                      duration: '{{ timer_reset_duration }}'
+                    target:
+                      entity_id: !input timer_entity
+                  - action: timer.pause
+                    target:
+                      entity_id: !input timer_entity
+              - alias: Turn on all lights due to the door opening
+                sequence: &turn_on_lights
+                  - repeat:
+                      count: '{{ switches | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          target:
+                            device_id: '{{ switches[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ dimmers | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            brightness_pct: 100
+                          target:
+                            device_id: '{{ dimmers[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgbw_devices | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            color_temp_kelvin: 6500
+                            brightness_pct: 100
+                          target:
+                            device_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgb_devices | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            rgb_color: [255, 255, 255]
+                            brightness_pct: 100
+                          target:
+                            device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Door closed ───────────────────────────────────────
       - conditions:
           - condition: trigger
             id: door_closed
         sequence:
-          - action: timer.start
-            data:
-              duration: '{{ timer_reset_duration }}'
-            target:
-              entity_id: !input timer_entity
+          - alias: Start the timer due to the door closing
+            sequence: &start_timer
+              - action: timer.start
+                data:
+                  duration: '{{ timer_reset_duration }}'
+                target:
+                  entity_id: !input timer_entity
+                entity_id: !input timer_entity
 
       # ── Motion detected ─────────────────────────────────--
       - conditions:
           - condition: trigger
             id: motion_detected
         sequence:
-          - action: timer.start
-            data:
-              duration: '{{ timer_reset_duration }}'
-            target:
-              entity_id: !input timer_entity
-          - repeat:
-              count: '{{ switches | length }}'
-              sequence:
-                - action: light.turn_on
-                  target:
-                    device_id: '{{ switches[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ dimmers | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ dimmers[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgbw_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    color_temp_kelvin: 6500
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgb_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    rgb_color: [255, 255, 255]
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
+          - parallel:
+              - alias: Start the timer due to motion
+                sequence: *start_timer
+              - alias: Turn on all lights due to motion
+                sequence: *turn_on_lights
 
       # ── Top-button single press → (same as door/motion) ───────
       - conditions:
           - condition: trigger
             id: top_button_single
         sequence:
-          - action: timer.start
-            data:
-              duration: '{{ timer_reset_duration }}'
-            target:
-              entity_id: !input timer_entity
-          - repeat:
-              count: '{{ switches | length }}'
-              sequence:
-                - action: light.turn_on
-                  target:
-                    device_id: '{{ switches[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ dimmers | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ dimmers[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgbw_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    color_temp_kelvin: 6500
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgb_devices | length }}'
-              sequence:
-                - action: light.turn_on
-                  data:
-                    rgb_color: [255, 255, 255]
-                    brightness_pct: 100
-                  target:
-                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
+          - parallel:
+              - alias: Start the timer due to the single button press
+                sequence: *start_timer
+              - alias: Turn on all lights due to single button press
+                sequence: *turn_on_lights
 
       # ── Bottom-button single press → turn everything off ───
       - conditions:
           - condition: trigger
             id: bottom_button_single
         sequence:
-          - action: timer.cancel
-            target:
-              entity_id: !input timer_entity
-          - repeat:
-              count: '{{ switches | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ switches[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ dimmers | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ dimmers[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgbw_devices | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgb_devices | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
+          - parallel:
+              - alias: Cancel the timer
+                sequence:
+                  - action: timer.cancel
+                    target:
+                      entity_id: !input timer_entity
+              - alias: Turn off all lights due to button press
+                sequence: &turn_off_lights
+                  - repeat:
+                      count: '{{ switches | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            device_id: '{{ switches[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ dimmers | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            device_id: '{{ dimmers[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgbw_devices | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            device_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgb_devices | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Top-button double press → turn on bypass (if supplied) ───
       - conditions:
@@ -452,34 +398,10 @@ action:
       - conditions:
           - condition: trigger
             id: motion_timer_ended
-          # If a bypass helper was supplied we honour its state;
+          # If a bypass helper was supplied we honor its state;
           # otherwise we always turn the lights off.
           - condition: template
             value_template: '{{ turn_off_lights_when_timer_ends | bool }}'
-        sequence:
-          - repeat:
-              count: '{{ switches | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ switches[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ dimmers | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ dimmers[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgbw_devices | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
-          - repeat:
-              count: '{{ rgb_devices | length }}'
-              sequence:
-                - action: light.turn_off
-                  target:
-                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
-
+        sequence: *turn_off_lights
+    default: [] # No default action
 mode: single
