@@ -244,7 +244,7 @@ action:
               sequence:
                 - action: light.turn_on
                   target:
-                    device_id: '{{ switches[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index - 1] }}'
           - repeat:
               count: '{{ dimmers | length }}'
               sequence:
@@ -252,8 +252,8 @@ action:
                   data:
                     brightness_pct: 100
                   target:
-                    device_id: '{{ dimmers[repeat.index] }}'
-          # White-temperature devices (optional)
+                    device_id: '{{ dimmers[repeat.index - 1] }}'
+          # White-temperature devices
           - repeat:
               count: '{{ rgbw_devices | length }}'
               sequence:
@@ -262,8 +262,8 @@ action:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgbw_devices[repeat.index] }}'
-          # RGB devices (optional)
+                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
+          # RGB devices
           - repeat:
               count: '{{ rgb_devices | length }}'
               sequence:
@@ -272,7 +272,7 @@ action:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_devices[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Door closed ───────────────────────────────────────
       - conditions:
@@ -300,7 +300,7 @@ action:
               sequence:
                 - action: light.turn_on
                   target:
-                    device_id: '{{ switches[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index - 1] }}'
           - repeat:
               count: '{{ dimmers | length }}'
               sequence:
@@ -308,7 +308,7 @@ action:
                   data:
                     brightness_pct: 100
                   target:
-                    device_id: '{{ dimmers[repeat.index] }}'
+                    device_id: '{{ dimmers[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgbw_devices | length }}'
               sequence:
@@ -317,7 +317,7 @@ action:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgbw_devices[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgb_devices | length }}'
               sequence:
@@ -326,7 +326,7 @@ action:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_devices[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Top-button single press → (same as door/motion) ───────
       - conditions:
@@ -343,7 +343,7 @@ action:
               sequence:
                 - action: light.turn_on
                   target:
-                    device_id: '{{ switches[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index - 1] }}'
           - repeat:
               count: '{{ dimmers | length }}'
               sequence:
@@ -351,7 +351,7 @@ action:
                   data:
                     brightness_pct: 100
                   target:
-                    device_id: '{{ dimmers[repeat.index] }}'
+                    device_id: '{{ dimmers[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgbw_devices | length }}'
               sequence:
@@ -360,7 +360,7 @@ action:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgbw_devices[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgb_devices | length }}'
               sequence:
@@ -369,7 +369,7 @@ action:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_devices[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Bottom-button single press → turn everything off ───
       - conditions:
@@ -384,25 +384,25 @@ action:
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ switches[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index - 1] }}'
           - repeat:
               count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ dimmers[repeat.index] }}'
+                    device_id: '{{ dimmers[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ rgbw_devices[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ rgb_devices[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Top-button double press → turn on bypass (if supplied) ───
       - conditions:
@@ -462,24 +462,24 @@ action:
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ switches[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index - 1] }}'
           - repeat:
               count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ dimmers[repeat.index] }}'
+                    device_id: '{{ dimmers[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ rgbw_devices[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index - 1] }}'
           - repeat:
               count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ rgb_devices[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index - 1] }}'
 
 mode: single
