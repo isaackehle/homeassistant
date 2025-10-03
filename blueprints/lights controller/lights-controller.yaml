@@ -66,8 +66,8 @@ blueprint:
         text:
 
     # ── Light groups ───────────────────────────────────
-    primary_light_group:
-      name: Primary light group
+    switches:
+      name: Switches and sockets
       description: Main group of lights turned on/off (e.g., ceiling bulbs).
       selector:
         entity:
@@ -75,9 +75,9 @@ blueprint:
             domain: light
           multiple: true
 
-    extra_light_groups:
-      name: Additional light groups
-      description: Optional extra groups (colour bulbs, LED strips) that are turned off when the timer ends or a bottom-button single press occurs.
+    dimmers:
+      name: Dimmers
+      description: Main group of lights on dimmers that need to be set to 100%.
       default: [] # optional
       selector:
         entity:
@@ -85,8 +85,8 @@ blueprint:
             domain: light
           multiple: true
 
-    # ── Devices that need colour-temp settings ───────────
-    white_device_ids:
+    # ── Devices that need a color-temp settings ───────────
+    rgbw_devices:
       name: White-temperature devices
       description: Device IDs that should be set to 6500 K, 100 % brightness.
       default: [] # optional
@@ -95,7 +95,7 @@ blueprint:
           multiple: true # any integration works
 
     # ── Devices that need pure-white RGB setting ────────
-    rgb_device_ids:
+    rgb_devices:
       name: RGB devices
       description: Device IDs that should be set to RGB 255-255-255, 100 % brightness.
       default: [] # optional
@@ -142,6 +142,10 @@ blueprint:
 variables:
   timer_reset_duration: !input timer_reset_duration
   bypass_boolean: !input bypass_boolean
+  switches: !input switches
+  dimmers: !input dimmers
+  rgbw_devices: !input rgbw_devices
+  rgb_devices: !input rgb_devices
   turn_off_lights_when_timer_ends: >-
     {% if bypass_boolean == '' %}
       true                     # no bypass helper → always turn off
@@ -184,19 +188,19 @@ trigger:
     to: KeyPressed
     id: top_button_single
 
-  # Top-button double press → enable bypass -------------------
-  - trigger: state
-    entity_id: !input top_button_events
-    attribute: event_type
-    to: KeyPressed2x
-    id: top_button_double
-
   # Bottom-button single press ---------------------------------
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
     to: KeyPressed
     id: bottom_button_single
+
+  # Top-button double press → enable bypass -------------------
+  - trigger: state
+    entity_id: !input top_button_events
+    attribute: event_type
+    to: KeyPressed2x
+    id: top_button_double
 
   # Bottom-button double press → disable bypass ----------------
   - trigger: state
@@ -231,33 +235,47 @@ action:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-
           - action: timer.pause
             target:
               entity_id: !input timer_entity
-          - action: light.turn_on
-            target:
-              entity_id: !input primary_light_group
+
+          - repeat:
+              count: '{{ switches | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ switches[repeat.index] }}'
+          - repeat:
+              count: '{{ dimmers | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ dimmers[repeat.index] }}'
+                - action: light.set_brightness
+                  data:
+                    brightness_pct: 100
+                  target:
+                    device_id: '{{ dimmers[repeat.index] }}'
           # White-temperature devices (optional)
           - repeat:
-              count: '{{ white_device_ids | length }}'
+              count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ white_device_ids[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index] }}'
           # RGB devices (optional)
           - repeat:
-              count: '{{ rgb_device_ids | length }}'
+              count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_device_ids[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index] }}'
 
       # ── Door closed ───────────────────────────────────────
       - conditions:
@@ -280,27 +298,36 @@ action:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          - action: light.turn_on
-            target:
-              entity_id: !input primary_light_group
           - repeat:
-              count: '{{ white_device_ids | length }}'
+              count: '{{ switches | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ switches[repeat.index] }}'
+          - repeat:
+              count: '{{ dimmers | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ dimmers[repeat.index] }}'
+          - repeat:
+              count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ white_device_ids[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index] }}'
           - repeat:
-              count: '{{ rgb_device_ids | length }}'
+              count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_device_ids[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index] }}'
 
       # ── Top-button single press → (same as door/motion) ───────
       - conditions:
@@ -312,27 +339,36 @@ action:
               duration: '{{ timer_reset_duration }}'
             target:
               entity_id: !input timer_entity
-          - action: light.turn_on
-            target:
-              entity_id: !input primary_light_group
           - repeat:
-              count: '{{ white_device_ids | length }}'
+              count: '{{ switches | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ switches[repeat.index] }}'
+          - repeat:
+              count: '{{ dimmers | length }}'
+              sequence:
+                - action: light.turn_on
+                  target:
+                    device_id: '{{ dimmers[repeat.index] }}'
+          - repeat:
+              count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     color_temp_kelvin: 6500
                     brightness_pct: 100
                   target:
-                    device_id: '{{ white_device_ids[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index] }}'
           - repeat:
-              count: '{{ rgb_device_ids | length }}'
+              count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_on
                   data:
                     rgb_color: [255, 255, 255]
                     brightness_pct: 100
                   target:
-                    device_id: '{{ rgb_device_ids[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index] }}'
 
       # ── Bottom-button single press → turn everything off ───
       - conditions:
@@ -342,30 +378,50 @@ action:
           - action: timer.cancel
             target:
               entity_id: !input timer_entity
-          - action: light.turn_off
-            data:
-              entity_id: >-
-                {{ (primary_light_group + extra_light_groups) | join(',') }}
+          - repeat:
+              count: '{{ switches | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ switches[repeat.index] }}'
+          - repeat:
+              count: '{{ dimmers | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ dimmers[repeat.index] }}'
+          - repeat:
+              count: '{{ rgbw_devices | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ rgbw_devices[repeat.index] }}'
+          - repeat:
+              count: '{{ rgb_devices | length }}'
+              sequence:
+                - action: light.turn_off
+                  target:
+                    device_id: '{{ rgb_devices[repeat.index] }}'
 
-      # ── Top-button double press → toggle bypass (if supplied) ───
+      # ── Top-button double press → turn on bypass (if supplied) ───
       - conditions:
           - condition: trigger
             id: top_button_double
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - action: input_boolean.toggle
+          - action: input_boolean.turn_on
             target:
               entity_id: !input bypass_boolean
 
-      # ── Bottom-button double press → toggle bypass (if supplied) ─
+      # ── Bottom-button double press → turn off bypass (if supplied) ─
       - conditions:
           - condition: trigger
             id: bottom_button_double
           - condition: template
             value_template: "{{ bypass_boolean != '' }}"
         sequence:
-          - action: input_boolean.toggle
+          - action: input_boolean.turn_off
             target:
               entity_id: !input bypass_boolean
 
@@ -401,28 +457,28 @@ action:
             value_template: '{{ turn_off_lights_when_timer_ends | bool }}'
         sequence:
           - repeat:
-              count: '{{ primary_light_group | length }}'
+              count: '{{ switches | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ primary_light_group[repeat.index] }}'
+                    device_id: '{{ switches[repeat.index] }}'
           - repeat:
-              count: '{{ extra_light_groups | length }}'
+              count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ extra_light_groups[repeat.index] }}'
+                    device_id: '{{ dimmers[repeat.index] }}'
           - repeat:
-              count: '{{ white_device_ids | length }}'
+              count: '{{ rgbw_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ white_device_ids[repeat.index] }}'
+                    device_id: '{{ rgbw_devices[repeat.index] }}'
           - repeat:
-              count: '{{ rgb_device_ids | length }}'
+              count: '{{ rgb_devices | length }}'
               sequence:
                 - action: light.turn_off
                   target:
-                    device_id: '{{ rgb_device_ids[repeat.index] }}'
+                    device_id: '{{ rgb_devices[repeat.index] }}'
 
 mode: single
