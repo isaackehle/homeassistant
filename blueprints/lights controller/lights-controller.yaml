@@ -249,9 +249,6 @@ action:
               count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_on
-                  target:
-                    device_id: '{{ dimmers[repeat.index] }}'
-                - action: light.set_brightness
                   data:
                     brightness_pct: 100
                   target:
@@ -308,6 +305,8 @@ action:
               count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_on
+                  data:
+                    brightness_pct: 100
                   target:
                     device_id: '{{ dimmers[repeat.index] }}'
           - repeat:
@@ -349,6 +348,8 @@ action:
               count: '{{ dimmers | length }}'
               sequence:
                 - action: light.turn_on
+                  data:
+                    brightness_pct: 100
                   target:
                     device_id: '{{ dimmers[repeat.index] }}'
           - repeat:
