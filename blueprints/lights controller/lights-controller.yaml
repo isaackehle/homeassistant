@@ -189,6 +189,7 @@ trigger:
   - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
+    from: '*'
     to: KeyPressed
     id: top_button_single
 
@@ -196,6 +197,7 @@ trigger:
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
+    from: '*'
     to: KeyPressed
     id: bottom_button_single
 
@@ -203,6 +205,7 @@ trigger:
   - trigger: state
     entity_id: !input top_button_events
     attribute: event_type
+    from: '*'
     to: KeyPressed2x
     id: top_button_double
 
@@ -210,6 +213,7 @@ trigger:
   - trigger: state
     entity_id: !input bottom_button_events
     attribute: event_type
+    from: '*'
     to: KeyPressed2x
     id: bottom_button_double
 
