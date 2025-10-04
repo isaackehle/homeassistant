@@ -87,12 +87,14 @@ blueprint:
 
     # ── Devices that need a color-temp settings ───────────
     rgbw_devices:
-      name: White-temperature devices
+      name: RGBW devices
       description: Device IDs that should be set to 6500 K, 100 % brightness.
       default: [] # optional
       selector:
-        device:
-          multiple: true # any integration works
+        entity:
+          filter:
+            domain: light
+          multiple: true
 
     # ── Devices that need pure-white RGB setting ────────
     rgb_devices:
@@ -100,8 +102,10 @@ blueprint:
       description: Device IDs that should be set to RGB 255-255-255, 100 % brightness.
       default: [] # optional
       selector:
-        device:
-          multiple: true # any integration works
+        entity:
+          filter:
+            domain: light
+          multiple: true
 
     # ── Button events ───────────────────────────────────
     top_button_events:
@@ -248,7 +252,7 @@ action:
                       sequence:
                         - action: light.turn_on
                           target:
-                            device_id: '{{ switches[repeat.index - 1] }}'
+                            entity_id: '{{ switches[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ dimmers | length }}'
                       sequence:
@@ -256,7 +260,7 @@ action:
                           data:
                             brightness_pct: 100
                           target:
-                            device_id: '{{ dimmers[repeat.index - 1] }}'
+                            entity_id: '{{ dimmers[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ rgbw_devices | length }}'
                       sequence:
@@ -265,7 +269,7 @@ action:
                             color_temp_kelvin: 6500
                             brightness_pct: 100
                           target:
-                            device_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgbw_devices[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ rgb_devices | length }}'
                       sequence:
@@ -274,7 +278,7 @@ action:
                             rgb_color: [255, 255, 255]
                             brightness_pct: 100
                           target:
-                            device_id: '{{ rgb_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Door closed ───────────────────────────────────────
       - conditions:
@@ -288,7 +292,6 @@ action:
                   duration: '{{ timer_reset_duration }}'
                 target:
                   entity_id: !input timer_entity
-                entity_id: !input timer_entity
 
       # ── Motion detected ─────────────────────────────────--
       - conditions:
@@ -330,33 +333,33 @@ action:
                       sequence:
                         - action: light.turn_off
                           target:
-                            device_id: '{{ switches[repeat.index - 1] }}'
+                            entity_id: '{{ switches[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ dimmers | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            device_id: '{{ dimmers[repeat.index - 1] }}'
+                            entity_id: '{{ dimmers[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ rgbw_devices | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            device_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgbw_devices[repeat.index - 1] }}'
                   - repeat:
                       count: '{{ rgb_devices | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            device_id: '{{ rgb_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgb_devices[repeat.index - 1] }}'
 
       # ── Top-button double press → turn on bypass (if supplied) ───
       - conditions:
           - condition: trigger
             id: top_button_double
           - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
-        sequence:
+            value_template: "{{ bypass_boolean != '' | bool }}"
+        sequence: &enable_bypass
           - action: input_boolean.turn_on
             target:
               entity_id: !input bypass_boolean
@@ -366,8 +369,8 @@ action:
           - condition: trigger
             id: bottom_button_double
           - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
-        sequence:
+            value_template: "{{ bypass_boolean != '' | bool }}"
+        sequence: &disable_bypass
           - action: input_boolean.turn_off
             target:
               entity_id: !input bypass_boolean
@@ -377,22 +380,16 @@ action:
           - condition: trigger
             id: sensor_action_single
           - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
-        sequence:
-          - action: input_boolean.turn_on
-            target:
-              entity_id: !input bypass_boolean
+            value_template: "{{ bypass_boolean != '' | bool }}"
+        sequence: *enable_bypass
 
       # ── Sensor-action: double → disable bypass ────────────────────
       - conditions:
           - condition: trigger
             id: sensor_action_double
           - condition: template
-            value_template: "{{ bypass_boolean != '' }}"
-        sequence:
-          - action: input_boolean.turn_off
-            target:
-              entity_id: !input bypass_boolean
+            value_template: "{{ bypass_boolean != '' | bool }}"
+        sequence: *disable_bypass
 
       # ── Timer reached idle - turn lights off unless bypass is on ─────────────────
       - conditions:
