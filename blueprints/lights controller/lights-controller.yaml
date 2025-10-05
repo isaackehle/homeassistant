@@ -3,8 +3,8 @@ blueprint:
   description: |
     • Reacts to doors, motion, button presses, and a timer.
     • Optional bypass flag (input_boolean) that can be toggled by double-tap
-      events or by a dedicated *sensor-action* array.
-    • The *sensor-action* array watches any number of entities whose
+      events or by a dedicated *Bypass action sensor* array.
+    • The *Bypass action sensor* array watches any number of entities whose
       state can be “single”, “double”, “unknown” or “unavailable”.
       - “single”  → enable bypass (turn ON the bypass boolean)
       - “double”  → disable bypass (turn OFF the bypass boolean)
@@ -33,10 +33,8 @@ blueprint:
           filter:
             domain: binary_sensor
           multiple: true
-
-    # ── Action sensors ──────────────
-    action_sensors:
-      name: Action sensors
+    bypass_action_sensors:
+      name: Bypass action sensors
       description: |
         List of sensors whose state can be “single”, “double”, “unknown”
         or “unavailable”.  Changing to “single” enables the bypass,
@@ -48,7 +46,6 @@ blueprint:
             domain: sensor
           multiple: true
 
-    # ── Timer ──────────────────────────────────────────
     timer_entity:
       name: Motion timer
       description: Timer that keeps the lights on after the last trigger.
@@ -65,19 +62,9 @@ blueprint:
       selector:
         text:
 
-    # ── Light groups ───────────────────────────────────
-    switches:
-      name: Switches and sockets
-      description: Main group of lights turned on/off (e.g., ceiling bulbs).
-      selector:
-        entity:
-          filter:
-            domain: light
-          multiple: true
-
-    dimmers:
-      name: Dimmers
-      description: Main group of lights on dimmers that need to be set to 100%.
+    toggle_entities:
+      name: Sockets and standard lights
+      description: Main group of lights that are turned on/off (e.g., ceiling bulbs, sockets controlling lamps).
       default: [] # optional
       selector:
         entity:
@@ -85,10 +72,9 @@ blueprint:
             domain: light
           multiple: true
 
-    # ── Devices that need a color-temp settings ───────────
-    rgbw_devices:
-      name: RGBW devices
-      description: Device IDs that should be set to 6500 K, 100 % brightness.
+    dimmer_entities:
+      name: dimmer_entities
+      description: Lights that can be dimmed which will be set to 100%.
       default: [] # optional
       selector:
         entity:
@@ -96,10 +82,18 @@ blueprint:
             domain: light
           multiple: true
 
-    # ── Devices that need pure-white RGB setting ────────
-    rgb_devices:
-      name: RGB devices
-      description: Device IDs that should be set to RGB 255-255-255, 100 % brightness.
+    rgbw_entities:
+      name: RGBW entities
+      description: Entities that should be set to 6500 K, 100 % brightness.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+    rgb_entities:
+      name: RGB entities
+      description: Entities that should be set to RGB 255-255-255, 100 % brightness.
       default: [] # optional
       selector:
         entity:
@@ -146,10 +140,10 @@ blueprint:
 variables:
   timer_reset_duration: !input timer_reset_duration
   bypass_boolean: !input bypass_boolean
-  switches: !input switches
-  dimmers: !input dimmers
-  rgbw_devices: !input rgbw_devices
-  rgb_devices: !input rgb_devices
+  toggle_entities: !input toggle_entities
+  dimmer_entities: !input dimmer_entities
+  rgbw_entities: !input rgbw_entities
+  rgb_entities: !input rgb_entities
   turn_off_lights_when_timer_ends: >-
     {% if bypass_boolean == '' %}
       true                     # no bypass helper → always turn off
@@ -217,17 +211,17 @@ trigger:
     to: KeyPressed2x
     id: bottom_button_double
 
-  # Action sensors – single ------------------------------------
+  # Bypass action sensors – single --------------------------
   - trigger: state
-    entity_id: !input action_sensors
+    entity_id: !input bypass_action_sensors
     to: 'single'
-    id: sensor_action_single
+    id: bypass_action_single
 
-  # Action sensors – double ------------------------------------
+  # Bypass action sensors – double --------------------------
   - trigger: state
-    entity_id: !input action_sensors
+    entity_id: !input bypass_action_sensors
     to: 'double'
-    id: sensor_action_double
+    id: bypass_action_double
 
 condition: [] # No global conditions – each branch decides its own flow
 
@@ -252,37 +246,37 @@ action:
               - alias: Turn on all lights due to the door opening
                 sequence: &turn_on_lights
                   - repeat:
-                      count: '{{ switches | length }}'
+                      count: '{{ toggle_entities | length }}'
                       sequence:
                         - action: light.turn_on
                           target:
-                            entity_id: '{{ switches[repeat.index - 1] }}'
+                            entity_id: '{{ toggle_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ dimmers | length }}'
+                      count: '{{ dimmer_entities | length }}'
                       sequence:
                         - action: light.turn_on
                           data:
                             brightness_pct: 100
                           target:
-                            entity_id: '{{ dimmers[repeat.index - 1] }}'
+                            entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ rgbw_devices | length }}'
+                      count: '{{ rgbw_entities | length }}'
                       sequence:
                         - action: light.turn_on
                           data:
                             color_temp_kelvin: 6500
                             brightness_pct: 100
                           target:
-                            entity_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ rgb_devices | length }}'
+                      count: '{{ rgb_entities | length }}'
                       sequence:
                         - action: light.turn_on
                           data:
                             rgb_color: [255, 255, 255]
                             brightness_pct: 100
                           target:
-                            entity_id: '{{ rgb_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgb_entities[repeat.index - 1] }}'
 
       # ── Door closed ───────────────────────────────────────
       - conditions:
@@ -333,29 +327,47 @@ action:
               - alias: Turn off all lights due to button press
                 sequence: &turn_off_lights
                   - repeat:
-                      count: '{{ switches | length }}'
+                      count: '{{ toggle_entities | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            entity_id: '{{ switches[repeat.index - 1] }}'
+                            entity_id: '{{ toggle_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ dimmers | length }}'
+                      count: '{{ dimmer_entities | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            entity_id: '{{ dimmers[repeat.index - 1] }}'
+                            entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ rgbw_devices | length }}'
+                      count: '{{ rgbw_entities | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            entity_id: '{{ rgbw_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
                   - repeat:
-                      count: '{{ rgb_devices | length }}'
+                      count: '{{ rgb_entities | length }}'
                       sequence:
                         - action: light.turn_off
                           target:
-                            entity_id: '{{ rgb_devices[repeat.index - 1] }}'
+                            entity_id: '{{ rgb_entities[repeat.index - 1] }}'
+
+      # ── Sensor-action: single → enable bypass ─────────────────────
+      - conditions:
+          - condition: trigger
+            id: bypass_action_single
+        sequence: &enable_bypass
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Sensor-action: double → disable bypass ────────────────────
+      - conditions:
+          - condition: trigger
+            id: bypass_action_double
+        sequence: &disable_bypass
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input bypass_boolean
 
       # ── Top-button double press → turn on bypass (if supplied) ───
       - conditions:
@@ -363,34 +375,12 @@ action:
             id: top_button_double
           - condition: template
             value_template: "{{ bypass_boolean != '' | bool }}"
-        sequence: &enable_bypass
-          - action: input_boolean.turn_on
-            target:
-              entity_id: !input bypass_boolean
+        sequence: *enable_bypass
 
       # ── Bottom-button double press → turn off bypass (if supplied) ─
       - conditions:
           - condition: trigger
             id: bottom_button_double
-          - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
-        sequence: &disable_bypass
-          - action: input_boolean.turn_off
-            target:
-              entity_id: !input bypass_boolean
-
-      # ── Sensor-action: single → enable bypass ─────────────────────
-      - conditions:
-          - condition: trigger
-            id: sensor_action_single
-          - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
-        sequence: *enable_bypass
-
-      # ── Sensor-action: double → disable bypass ────────────────────
-      - conditions:
-          - condition: trigger
-            id: sensor_action_double
           - condition: template
             value_template: "{{ bypass_boolean != '' | bool }}"
         sequence: *disable_bypass
