@@ -374,7 +374,7 @@ action:
           - condition: trigger
             id: top_button_double
           - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
+            value_template: "{{ bypass_boolean != '' }}"
         sequence: *enable_bypass
 
       # ── Bottom-button double press → turn off bypass (if supplied) ─
@@ -382,7 +382,7 @@ action:
           - condition: trigger
             id: bottom_button_double
           - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
+            value_template: "{{ bypass_boolean != '' }}"
         sequence: *disable_bypass
 
       # ── Timer reached idle - turn lights off unless bypass is on ─────────────────
@@ -392,7 +392,7 @@ action:
           # If a bypass helper was supplied we honor its state;
           # otherwise we always turn the lights off.
           - condition: template
-            value_template: '{{ turn_off_lights_when_timer_ends | bool }}'
+            value_template: '{{ turn_off_lights_when_timer_ends }}'
         sequence: *turn_off_lights
     default: [] # No default action
 mode: single
