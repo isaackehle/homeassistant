@@ -1,0 +1,398 @@
+blueprint:
+  name: Room-style lights controller
+  description: |
+    • Reacts to doors, motion, button presses, and a timer.
+    • Optional bypass flag (input_boolean) that can be toggled by double-tap
+      events or by a dedicated *Bypass action sensor* array.
+    • The *Bypass action sensor* array watches any number of entities whose
+      state can be “single”, “double”, “unknown” or “unavailable”.
+      - “single”  → enable bypass (turn ON the bypass boolean)
+      - “double”  → disable bypass (turn OFF the bypass boolean)
+      - other states are ignored.
+    • All steps use the modern `action:` syntax.
+  domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/blueprints # optional
+
+  input:
+    # ── Sensors ────────────────────────────────────────
+    door_sensors:
+      name: Door sensors
+      description: Binary sensors that indicate a door (or similar) opening.
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+          multiple: true
+
+    motion_sensors:
+      name: Motion sensors
+      description: Binary sensors that indicate occupancy or motion.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+          multiple: true
+    bypass_action_sensors:
+      name: Bypass action sensors
+      description: |
+        List of sensors whose state can be “single”, “double”, “unknown”
+        or “unavailable”.  Changing to “single” enables the bypass,
+        changing to “double” disables it.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: sensor
+          multiple: true
+
+    timer_entity:
+      name: Motion timer
+      description: Timer that keeps the lights on after the last trigger.
+      selector:
+        entity:
+          filter:
+            domain: timer
+          multiple: false
+
+    timer_reset_duration:
+      name: Timer reset duration
+      description: How long the timer should stay active after each trigger.
+      default: '00:20:00'
+      selector:
+        text:
+
+    toggle_entities:
+      name: Sockets and standard lights
+      description: Main group of lights that are turned on/off (e.g., ceiling bulbs, sockets controlling lamps).
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+
+    dimmer_entities:
+      name: dimmer_entities
+      description: Lights that can be dimmed which will be set to 100%.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+
+    rgbw_entities:
+      name: RGBW entities
+      description: Entities that should be set to 6500 K, 100 % brightness.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+    rgb_entities:
+      name: RGB entities
+      description: Entities that should be set to RGB 255-255-255, 100 % brightness.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: light
+          multiple: true
+
+    # ── Button events ───────────────────────────────────
+    top_button_events:
+      name: Top-button event entities
+      description: Event entities that fire when a “top” button is pressed.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: event
+          multiple: true
+
+    bottom_button_events:
+      name: Bottom-button event entities
+      description: Event entities that fire when a “bottom” button is pressed.
+      default: [] # optional
+      selector:
+        entity:
+          filter:
+            domain: event
+          multiple: true
+
+    # ── Bypass helper (optional) ───────────────────────
+    bypass_boolean:
+      name: Bypass helper
+      description: |
+        Optional `input_boolean` that stores the bypass flag.
+        If left empty the automation will ignore bypass logic.
+        When supplied, double-tap events and sensor-action changes
+        will toggle this helper.
+      default: '' # empty = “not supplied”
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+          multiple: false
+
+variables:
+  timer_reset_duration: !input timer_reset_duration
+  bypass_boolean: !input bypass_boolean
+  toggle_entities: !input toggle_entities
+  dimmer_entities: !input dimmer_entities
+  rgbw_entities: !input rgbw_entities
+  rgb_entities: !input rgb_entities
+  turn_off_lights_when_timer_ends: >-
+    {% if bypass_boolean == '' %}
+      true                     # no bypass helper → always turn off
+    {% else %}
+      {{ states(bypass_boolean) == 'off' }} # bypass helper supplied and off
+    {% endif %}
+
+trigger:
+  # Door opened -------------------------------------------------
+  - trigger: state
+    entity_id: !input door_sensors
+    to: 'on'
+    from: 'off'
+    id: door_opened
+
+  # Door closed -------------------------------------------------
+  - trigger: state
+    entity_id: !input door_sensors
+    to: 'off'
+    from: 'on'
+    id: door_closed
+
+  # Motion detected (any of the listed sensors) ---------------
+  - trigger: state
+    entity_id: !input motion_sensors
+    to: 'on'
+    id: motion_detected
+
+  # Timer becomes idle (i.e. expires) -------------------------
+  - trigger: state
+    entity_id: !input timer_entity
+    from: '*'
+    to: idle
+    id: motion_timer_ended
+
+  # Top-button single press ------------------------------------
+  - trigger: state
+    entity_id: !input top_button_events
+    attribute: event_type
+    from: '*'
+    to: KeyPressed
+    id: top_button_single
+
+  # Bottom-button single press ---------------------------------
+  - trigger: state
+    entity_id: !input bottom_button_events
+    attribute: event_type
+    from: '*'
+    to: KeyPressed
+    id: bottom_button_single
+
+  # Top-button double press → enable bypass -------------------
+  - trigger: state
+    entity_id: !input top_button_events
+    attribute: event_type
+    from: '*'
+    to: KeyPressed2x
+    id: top_button_double
+
+  # Bottom-button double press → disable bypass ----------------
+  - trigger: state
+    entity_id: !input bottom_button_events
+    attribute: event_type
+    from: '*'
+    to: KeyPressed2x
+    id: bottom_button_double
+
+  # Bypass action sensors – single --------------------------
+  - trigger: state
+    entity_id: !input bypass_action_sensors
+    to: 'single'
+    id: bypass_action_single
+
+  # Bypass action sensors – double --------------------------
+  - trigger: state
+    entity_id: !input bypass_action_sensors
+    to: 'double'
+    id: bypass_action_double
+
+condition: [] # No global conditions – each branch decides its own flow
+
+action:
+  - choose:
+      # ── Door opened ───────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: door_opened
+        sequence:
+          - parallel:
+              - alias: Reset and pause the timer
+                sequence:
+                  - action: timer.set_duration
+                    data:
+                      duration: '{{ timer_reset_duration }}'
+                    target:
+                      entity_id: !input timer_entity
+                  - action: timer.pause
+                    target:
+                      entity_id: !input timer_entity
+              - alias: Turn on all lights due to the door opening
+                sequence: &turn_on_lights
+                  - repeat:
+                      count: '{{ toggle_entities | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          target:
+                            entity_id: '{{ toggle_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ dimmer_entities | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            brightness_pct: 100
+                          target:
+                            entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgbw_entities | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            color_temp_kelvin: 6500
+                            brightness_pct: 100
+                          target:
+                            entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgb_entities | length }}'
+                      sequence:
+                        - action: light.turn_on
+                          data:
+                            rgb_color: [255, 255, 255]
+                            brightness_pct: 100
+                          target:
+                            entity_id: '{{ rgb_entities[repeat.index - 1] }}'
+
+      # ── Door closed ───────────────────────────────────────
+      - conditions:
+          - condition: trigger
+            id: door_closed
+        sequence:
+          - alias: Start the timer due to the door closing
+            sequence: &start_timer
+              - action: timer.start
+                data:
+                  duration: '{{ timer_reset_duration }}'
+                target:
+                  entity_id: !input timer_entity
+
+      # ── Motion detected ─────────────────────────────────--
+      - conditions:
+          - condition: trigger
+            id: motion_detected
+        sequence:
+          - parallel:
+              - alias: Start the timer due to motion
+                sequence: *start_timer
+              - alias: Turn on all lights due to motion
+                sequence: *turn_on_lights
+
+      # ── Top-button single press → (same as door/motion) ───────
+      - conditions:
+          - condition: trigger
+            id: top_button_single
+        sequence:
+          - parallel:
+              - alias: Start the timer due to the single button press
+                sequence: *start_timer
+              - alias: Turn on all lights due to single button press
+                sequence: *turn_on_lights
+
+      # ── Bottom-button single press → turn everything off ───
+      - conditions:
+          - condition: trigger
+            id: bottom_button_single
+        sequence:
+          - parallel:
+              - alias: Cancel the timer
+                sequence:
+                  - action: timer.cancel
+                    target:
+                      entity_id: !input timer_entity
+              - alias: Turn off all lights due to button press
+                sequence: &turn_off_lights
+                  - repeat:
+                      count: '{{ toggle_entities | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            entity_id: '{{ toggle_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ dimmer_entities | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgbw_entities | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
+                  - repeat:
+                      count: '{{ rgb_entities | length }}'
+                      sequence:
+                        - action: light.turn_off
+                          target:
+                            entity_id: '{{ rgb_entities[repeat.index - 1] }}'
+
+      # ── Sensor-action: single → enable bypass ─────────────────────
+      - conditions:
+          - condition: trigger
+            id: bypass_action_single
+        sequence: &enable_bypass
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Sensor-action: double → disable bypass ────────────────────
+      - conditions:
+          - condition: trigger
+            id: bypass_action_double
+        sequence: &disable_bypass
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input bypass_boolean
+
+      # ── Top-button double press → turn on bypass (if supplied) ───
+      - conditions:
+          - condition: trigger
+            id: top_button_double
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
+        sequence: *enable_bypass
+
+      # ── Bottom-button double press → turn off bypass (if supplied) ─
+      - conditions:
+          - condition: trigger
+            id: bottom_button_double
+          - condition: template
+            value_template: "{{ bypass_boolean != '' }}"
+        sequence: *disable_bypass
+
+      # ── Timer reached idle - turn lights off unless bypass is on ─────────────────
+      - conditions:
+          - condition: trigger
+            id: motion_timer_ended
+          # If a bypass helper was supplied we honor its state;
+          # otherwise we always turn the lights off.
+          - condition: template
+            value_template: '{{ turn_off_lights_when_timer_ends }}'
+        sequence: *turn_off_lights
+    default: [] # No default action
+mode: single
