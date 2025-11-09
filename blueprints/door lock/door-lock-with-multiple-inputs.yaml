@@ -51,6 +51,7 @@ blueprint:
         When any of these sensors are pressed, the automation runs immediately.
         If the door is closed and unlocked, it will lock.
         If the door is closed and locked, or if the door is open, nothing happens.
+      default: []
       selector:
         entity:
           filter:
