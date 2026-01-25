@@ -67,9 +67,15 @@ trigger:
 condition:
   - condition: template
     value_template: >
-      {% set illuminance_entity = states[input_illuminance_sensor] %}
-      {% if illuminance_entity is defined %}
-        {{ illuminance_entity.state | float(0) < input_illuminance_threshold | float(100) }}
+      {% set illuminance_sensor = !input illuminance_sensor %}
+      {% set illuminance_threshold = !input illuminance_threshold %}
+      {% if illuminance_sensor %}
+        {% set illuminance_entity = states[illuminance_sensor] %}
+        {% if illuminance_entity is defined %}
+          {{ illuminance_entity.state | float(0) < illuminance_threshold | float(100) }}
+        {% else %}
+          true
+        {% endif %}
       {% else %}
         true
       {% endif %}

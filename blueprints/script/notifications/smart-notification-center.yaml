@@ -48,6 +48,12 @@ blueprint:
       default: false
       selector:
         boolean:
+    tts_service:
+      name: TTS Service
+      description: The TTS service to use (e.g., tts.google_translate_say, tts.cloud_say)
+      default: tts.google_translate_say
+      selector:
+        text:
     tts_entity:
       name: TTS Entity
       description: The media player for TTS
@@ -82,7 +88,7 @@ sequence:
           - condition: template
             value_template: "{{ tts_announce }}"
         sequence:
-          - service: tts.google_translate_say
+          - service: !input tts_service
             data:
               entity_id: !input tts_entity
               message: "{{ notification_title }}. {{ notification_message }}"
