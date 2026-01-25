@@ -1,0 +1,252 @@
+blueprint:
+  name: Fireplace Controller
+  description: |
+    Automatically controls a fireplace blower fan based on temperature thresholds.
+
+    Supports three operation modes:
+    - OFF: Blower completely disabled
+    - AUTO: Temperature-based control using internal/external sensors
+    - ALWAYS_ON: Blower runs continuously
+
+    Can use internal fireplace temperature, external room temperature, or both.
+  domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/fireplace-controller/fireplace-controller.yaml
+
+  input:
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TEMPERATURE SENSORS - Optional but recommended for automatic control
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    internal_temperature_sensor:
+      name: Internal Temperature Sensor
+      description: |
+        OPTIONAL - Temperature sensor inside or very close to the fireplace.
+
+        When internal temperature exceeds the "high threshold", the blower automatically
+        turns on to distribute heat. When it drops below the "low threshold", the blower
+        turns off to prevent running unnecessarily.
+
+        Leave empty if you don't have an internal sensor - you can still use the external
+        sensor or control the blower manually via the operation mode selector.
+
+        Example entities: sensor.fireplace_temperature, sensor.living_room_temp
+      default:
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: temperature
+
+    external_temperature_sensor:
+      name: External Temperature Sensor
+      description: |
+        OPTIONAL - Temperature sensor for ambient room or outdoor temperature.
+
+        Useful for preventing unnecessary blower operation in hot rooms or for
+        coordinating with other climate control systems. Can be used independently
+        or together with the internal sensor.
+
+        Leave empty if you only have an internal sensor or want manual control only.
+
+        Example entities: sensor.living_room_temperature, sensor.outdoor_temp
+      default:
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: temperature
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # CONTROL ENTITIES - Required for automation to function
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    blower_switch:
+      name: Blower Switch
+      description: |
+        REQUIRED - The switch entity that controls your fireplace blower fan.
+
+        This switch will be turned on/off automatically based on temperature conditions
+        and the selected operation mode. Ensure the switch is properly connected to your
+        blower hardware (smart plug, relay, etc.).
+
+        Example entities: switch.fireplace_blower, switch.living_room_fan
+      selector:
+        entity:
+          filter:
+            - domain: switch
+
+    operation_mode_entity:
+      name: Operation Mode Selector
+      description: |
+        REQUIRED - An input_select dropdown helper that controls operation modes.
+
+        Must have EXACTLY these three options (case-sensitive):
+        • off       - Blower is completely disabled
+        • auto      - Blower controlled automatically based on temperature sensors
+        • always_on - Blower runs continuously
+
+        To create this helper:
+        1. Go to Settings → Devices & Services → Helpers → Dropdown
+        2. Name it something like "Fireplace Mode"
+        3. Add the exact options: off, auto, always_on
+        4. Save and select it here
+
+        This allows you to manually override automatic control when needed.
+      selector:
+        entity:
+          filter:
+            - domain: input_select
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # INTERNAL TEMPERATURE THRESHOLDS - Only used if internal sensor is configured
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    internal_high_temperature:
+      name: Internal High Temperature Threshold (°)
+      description: |
+        When internal temperature EXCEEDS this value, the blower turns ON.
+
+        Default: 120°
+
+        Adjust based on your fireplace specifications:
+        - Higher values = blower runs less frequently (less air movement)
+        - Lower values = blower runs more frequently (more air distribution)
+
+        Only used if internal temperature sensor is configured.
+      default: 120
+      selector:
+        number:
+          min: 50
+          max: 200
+          step: 1
+          unit_of_measurement: '°'
+
+    internal_low_temperature:
+      name: Internal Low Temperature Threshold (°)
+      description: |
+        When internal temperature DROPS BELOW this value, the blower turns OFF.
+
+        Default: 90°
+
+        IMPORTANT: This should always be LOWER than the high threshold to prevent
+        the blower from rapid on/off cycling (hysteresis).
+
+        Example: If high is 120°, set low to 90-100° for stable operation.
+
+        Only used if internal temperature sensor is configured.
+      default: 90
+      selector:
+        number:
+          min: 50
+          max: 200
+          step: 1
+          unit_of_measurement: '°'
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # EXTERNAL TEMPERATURE THRESHOLDS - Only used if external sensor is configured
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    external_high_temperature:
+      name: External High Temperature Threshold (°)
+      description: |
+        When external/room temperature EXCEEDS this value, the blower turns ON.
+
+        Default: 80°
+
+        Useful for:
+        - Turning off blower when room is already hot
+        - Coordinating with air conditioning or other climate systems
+        - Preventing unnecessary operation during summer
+
+        Only used if external temperature sensor is configured.
+      default: 80
+      selector:
+        number:
+          min: 50
+          max: 200
+          step: 1
+          unit_of_measurement: '°'
+
+    external_low_temperature:
+      name: External Low Temperature Threshold (°)
+      description: |
+        When external/room temperature DROPS BELOW this value, the blower turns OFF.
+
+        Default: 75°
+
+        IMPORTANT: This should always be LOWER than the high threshold to prevent
+        the blower from rapid on/off cycling (hysteresis).
+
+        Example: If high is 80°, set low to 70-75° for stable operation.
+
+        Only used if external temperature sensor is configured.
+      default: 75
+      selector:
+        number:
+          min: 50
+          max: 200
+          step: 1
+          unit_of_measurement: '°'
+
+trigger:
+  # Check temperature conditions every 3 minutes for responsive blower control
+  - trigger: time_pattern
+    minutes: '/3'
+  # Also trigger when operation mode is manually changed
+  - trigger: state
+    entity_id: !input operation_mode_entity
+
+variables:
+  # Store input references for easy access throughout the automation
+  operation_mode_entity: !input operation_mode_entity
+  internal_temperature_sensor: !input internal_temperature_sensor
+  external_temperature_sensor: !input external_temperature_sensor
+
+  # Temperature thresholds from user configuration
+  internal_high_temperature: !input internal_high_temperature
+  internal_low_temperature: !input internal_low_temperature
+  external_high_temperature: !input external_high_temperature
+  external_low_temperature: !input external_low_temperature
+
+  # Current operation mode: 'off', 'auto', or 'always_on'
+  operation_mode: '{{ states(operation_mode_entity) }}'
+
+  # Get current temperature readings, default to 0 if sensor not available
+  internal_temp: '{{ states(internal_temperature_sensor) | float(0) if internal_temperature_sensor else 0 }}'
+  external_temp: '{{ states(external_temperature_sensor) | float(0) if external_temperature_sensor else 0 }}'
+
+  # Determine if temperature thresholds are exceeded (triggers blower on)
+  internal_exceeds_high: '{{ internal_temperature_sensor and internal_temp > internal_high_temperature }}'
+  external_exceeds_high: '{{ external_temperature_sensor and external_temp > external_high_temperature }}'
+
+  # Determine if temperature thresholds are undercut (triggers blower off)
+  internal_below_low: '{{ internal_temperature_sensor and internal_temp < internal_low_temperature }}'
+  external_below_low: '{{ external_temperature_sensor and external_temp < external_low_temperature }}'
+
+  # Logic: Turn on if always_on mode OR auto mode with any high threshold exceeded
+  should_turn_on: "{{ operation_mode == 'always_on' or (operation_mode == 'auto' and (internal_exceeds_high or external_exceeds_high)) }}"
+
+  # Logic: Turn off if off mode OR auto mode with all active sensors below low threshold
+  should_turn_off: "{{ operation_mode == 'off' or (operation_mode == 'auto' and (internal_below_low or external_below_low)) }}"
+
+action:
+  # Choose between turning blower on, off, or leaving it unchanged
+  - choose:
+      # TURN ON: Either in always_on mode or auto mode with high temp threshold exceeded
+      - conditions:
+          - condition: template
+            value_template: '{{ should_turn_on }}'
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input blower_switch
+      # TURN OFF: Either in off mode or auto mode with low temp threshold undercut
+      - conditions:
+          - condition: template
+            value_template: '{{ should_turn_off }}'
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input blower_switch
+
+mode: single

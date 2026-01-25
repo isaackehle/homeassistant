@@ -1,0 +1,61 @@
+blueprint:
+  name: IR Code Sender
+  description: >
+    Choose a list of IR-code strings and have Home Assistant publish them,
+    one after another, to a Zigbee2MQTT IR-blaster (e.g. a Sonoff RF Bridge,
+    a Zigbee IR controller, etc.).  The payload format matches:
+    {"ir_code_to_send": "<BASE64_CODE>"}.
+  domain: automation
+  input:
+    mqtt_device:
+      name: Zigbee2MQTT IR device
+      description: The Zigbee2MQTT entity name (without the “zigbee2mqtt/” prefix).
+      selector:
+        text:
+    ir_codes:
+      name: IR code list
+      description: >
+        Comma-separated list of Base64-encoded IR codes (the exact strings you
+        would put into the payload's `ir_code_to_send` field).
+      selector:
+        text:
+          multiline: true
+    delay_between:
+      name: Delay between codes (seconds)
+      description: Time to wait after each publish before sending the next one.
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          unit_of_measurement: s
+    trigger_config:
+      name: Trigger
+      description: How this automation should start (button, time, etc.).
+      selector:
+        trigger:
+
+mode: single
+trigger: !input trigger_config
+
+action:
+  - variables:
+      # Build the full MQTT topic once
+      mqtt_topic: 'zigbee2mqtt/{{ mqtt_device }}/set'
+      # Turn the CSV string into a clean Python list
+      code_list: "{{ ir_codes.split(',') | map('trim') | list }}"
+      delay_sec: '{{ delay_between }}'
+
+  # Iterate over each code and publish it
+  - repeat:
+      count: '{{ code_list | length }}'
+      sequence:
+        - service: mqtt.publish
+          data:
+            topic: '{{ mqtt_topic }}'
+            payload: >
+              {"ir_code_to_send": "{{ code_list[repeat.index - 1] }}"}
+            qos: 0
+            retain: false
+        - delay: '{{ delay_sec }}'

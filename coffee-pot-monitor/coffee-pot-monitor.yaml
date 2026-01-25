@@ -1,0 +1,248 @@
+blueprint:
+  name: Coffee-pot monitor with optional logging
+  description: |
+    Monitors a power-sensor attached to a coffee-pot and shows three
+    visual states (start, brewing, finished). Sends a push notification
+    and can optionally write Logbook entries (controlled by a toggle).
+    All entity IDs, thresholds and the logging toggle are exposed as
+    blueprint inputs, so the same blueprint can be reused for any
+    appliance.
+  domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/coffee-pot-monitor/coffee-pot-monitor.yaml
+
+  # -------------------------------------------------------
+  # INPUTS – what the user selects when they instantiate the blueprint
+  # ----------------------------------------
+  input:
+    power_sensor:
+      name: Power sensor
+      description: Sensor that reports the appliance power in watts.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+
+    indicator_light:
+      name: Indicator light
+      description: Light that will display the brewing state.
+      selector:
+        entity:
+          filter:
+            domain: light
+
+    notify_service:
+      name: Notification service
+      description: Notify service to send push messages (e.g., notify.mobile_app_phone).
+      default: notify.notify
+      selector:
+        text:
+
+    log_toggle:
+      name: Logging toggle
+      description: Input Boolean that enables/disables Logbook entries.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+
+    start_threshold:
+      name: Start threshold (W)
+      description: Power value above which brewing is considered started.
+      default: 1000
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+
+    finish_threshold:
+      name: Finish threshold (W)
+      description: Power value below which brewing is considered finished.
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+
+    in_progress_low:
+      name: In-progress lower bound (W)
+      description: Lower bound of the “brewing in progress” window.
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+
+    in_progress_high:
+      name: In-progress upper bound (W)
+      description: Upper bound of the “brewing in progress” window.
+      default: 1000
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+
+    coffee_pot_switch:
+      name: Coffee pot switch
+      description: Switch that powers the coffee pot (for auto-off).
+      selector:
+        entity:
+          filter:
+            domain: switch
+
+variables:
+  start_threshold: !input start_threshold
+  finish_threshold: !input finish_threshold
+  in_progress_low: !input in_progress_low
+  in_progress_high: !input in_progress_high
+
+  # For auto-off
+  coffee_pot_switch: !input coffee_pot_switch
+
+trigger:
+  # 1️⃣ Brewing started
+  - trigger: numeric_state
+    entity_id: !input power_sensor
+    above: !input start_threshold
+    for:
+      seconds: 1
+
+  # 2️⃣ Brewing in progress
+  - trigger: numeric_state
+    entity_id: !input power_sensor
+    above: !input in_progress_low
+    below: !input in_progress_high
+    for:
+      seconds: 1
+
+  # 3️⃣ Brewing finished
+  - trigger: numeric_state
+    entity_id: !input power_sensor
+    below: !input finish_threshold
+    for:
+      seconds: 1
+
+  # 4️⃣ Coffee pot auto-off: switch has been ON for 15 minutes
+  - platform: state
+    entity_id: !input coffee_pot_switch
+    to: 'on'
+    for:
+      minutes: 15
+
+condition: [] # No global condition – each branch decides its own logic.
+
+action:
+  - choose:
+      # -------------------------------------------------
+      # 1️⃣ Brewing started – bright cool-white
+      # -------------------------------------------------
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input power_sensor
+            above: !input start_threshold
+        sequence:
+          - delay: '00:00:02'
+          - action: light.turn_on
+            target:
+              entity_id: !input indicator_light
+            data:
+              color_temp_kelvin: 6500
+              brightness_pct: 100
+          - action: !input notify_service
+            data:
+              title: 'Coffee notification'
+              message: '☕️ Coffee has started brewing.'
+          # ----- Conditional logging -----
+          - condition: state
+            entity_id: !input log_toggle
+            state: 'on'
+          - action: logbook.log
+            data:
+              name: 'Coffee pot'
+              message: 'Brewing started (power > {{ start_threshold }} W)'
+              entity_id: !input power_sensor
+
+      # -------------------------------------------------
+      # 2️⃣ Brewing in progress – dim amber
+      # -------------------------------------------------
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input power_sensor
+            above: !input in_progress_low
+            below: !input in_progress_high
+        sequence:
+          - delay: '00:00:02'
+          - action: light.turn_on
+            target:
+              entity_id: !input indicator_light
+            data:
+              brightness_pct: 30
+              rgb_color: [25, 140, 0] # amber/orange
+          # ----- Conditional logging -----
+          - condition: state
+            entity_id: !input log_toggle
+            state: 'on'
+          - action: logbook.log
+            data:
+              name: 'Coffee pot'
+              message: 'Brewing in progress ({{ in_progress_low }} W < power < {{ in_progress_high }} W)'
+              entity_id: !input power_sensor
+
+      # -------------------------------------------------
+      # 3️⃣ Brewing finished – bright green
+      # -------------------------------------------------
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input power_sensor
+            below: !input finish_threshold
+        sequence:
+          - delay: '00:00:02'
+          - action: light.turn_on
+            target:
+              entity_id: !input indicator_light
+            data:
+              brightness_pct: 100
+              rgb_color: [110, 235, 75] # vivid green
+          - action: !input notify_service
+            data:
+              title: 'Coffee notification'
+              message: '✅ Coffee is ready!'
+          # ----- Conditional logging -----
+          - condition: state
+            entity_id: !input log_toggle
+            state: 'on'
+          - action: logbook.log
+            data:
+              name: 'Coffee pot'
+              message: 'Brewing finished (power < {{ finish_threshold }} W)'
+              entity_id: !input power_sensor
+
+      # -------------------------------------------------
+      # 4️⃣ Coffee pot auto-off after 15 minutes
+      # -------------------------------------------------
+      - conditions:
+          - condition: state
+            entity_id: !input coffee_pot_switch
+            state: 'on'
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input coffee_pot_switch
+          - action: !input notify_service
+            data:
+              title: 'Coffee notification'
+              message: '☕️ Coffee pot was left on for 15 minutes and has been turned off automatically.'
+          # ----- Conditional logging -----
+          - condition: state
+            entity_id: !input log_toggle
+            state: 'on'
+          - action: logbook.log
+            data:
+              name: 'Coffee pot'
+              message: 'Coffee pot auto-off triggered after 15 minutes.'
+              entity_id: !input coffee_pot_switch
+
+mode: restart # Latest state always wins if events overlap.

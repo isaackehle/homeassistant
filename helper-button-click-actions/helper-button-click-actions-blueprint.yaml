@@ -1,0 +1,55 @@
+blueprint:
+  name: Helper Button Click Actions
+  description: |
+    Blueprint to handle single and double click actions for a helper button using MQTT device triggers.
+    Instead of running actions, this blueprint generates a system event message that sensors can pick up:
+      - KeyPressed for single click
+      - KeyPressed2x for double click
+  domain: automation
+  source_url: 'https://github.com/isaackehle/homeassistant/helper-button-click-actions/helper-button-click-actions-blueprint.yaml'
+
+  input:
+    button_entity:
+      name: Button Entity
+      description: The button helper entity to use as the button trigger.
+      selector:
+        entity:
+          domain:
+            - button
+            - input_button
+
+variables:
+  button_entity: !input button_entity
+
+triggers:
+  - trigger: state
+    entity_id: !input button_entity
+    id: any-state-change
+
+actions:
+  - alias: 'Log button click to system log'
+    service: system_log.write
+    data:
+      level: 'info'
+      message: >-
+        Button click detected on {{ states[button_entity].name or button_entity }} at {{ now() }}
+  - alias: 'Check for single or double click (delay method)'
+    wait_for_trigger:
+      - platform: state
+        entity_id: !input button_entity
+    timeout:
+      seconds: 1
+    continue_on_timeout: true
+    if:
+      - condition: template
+        value_template: '{{ wait.trigger is not none }}'
+    then:
+      - event: system_action
+        event_data:
+          action: KeyPressed2x
+          entity_id: !input button_entity
+    else:
+      - event: system_action
+        event_data:
+          action: KeyPressed
+          entity_id: !input button_entity
