@@ -1,0 +1,148 @@
+name: Validate Blueprints
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'blueprints/**/*.yaml'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'blueprints/**/*.yaml'
+      - '.github/workflows/validate.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Blueprint YAML Files
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+          
+      - name: Validate YAML syntax
+        run: |
+          python << 'EOF'
+          import yaml
+          import sys
+          import os
+          from pathlib import Path
+          
+          def validate_yaml_syntax(filepath):
+              """Check basic YAML syntax (ignoring Home Assistant specific tags)"""
+              try:
+                  with open(filepath, 'r') as f:
+                      content = f.read()
+                  # Try to parse, allowing unknown tags
+                  yaml.load(content, Loader=yaml.BaseLoader)
+                  return True, None
+              except yaml.YAMLError as e:
+                  return False, str(e)
+          
+          def validate_blueprint_structure(filepath):
+              """Validate required blueprint fields"""
+              try:
+                  with open(filepath, 'r') as f:
+                      content = f.read()
+                  # Parse with BaseLoader to handle !input tags
+                  data = yaml.load(content, Loader=yaml.BaseLoader)
+                  
+                  if 'blueprint' not in data:
+                      return False, "Missing 'blueprint' key"
+                  
+                  blueprint = data['blueprint']
+                  if 'name' not in blueprint:
+                      return False, "Missing 'blueprint.name'"
+                  if 'domain' not in blueprint:
+                      return False, "Missing 'blueprint.domain'"
+                  
+                  # Check domain is valid
+                  valid_domains = ['automation', 'script', 'template']
+                  if blueprint['domain'] not in valid_domains:
+                      return False, f"Invalid domain '{blueprint['domain']}'. Must be one of: {', '.join(valid_domains)}"
+                  
+                  return True, None
+              except Exception as e:
+                  return False, str(e)
+          
+          # Find all YAML files in blueprints directory
+          blueprint_files = list(Path('blueprints').rglob('*.yaml'))
+          
+          if not blueprint_files:
+              print("❌ No blueprint files found!")
+              sys.exit(1)
+          
+          print(f"Found {len(blueprint_files)} blueprint file(s) to validate\n")
+          
+          all_valid = True
+          for filepath in blueprint_files:
+              print(f"Validating: {filepath}")
+              
+              # Check YAML syntax
+              valid, error = validate_yaml_syntax(filepath)
+              if not valid:
+                  print(f"  ❌ YAML syntax error: {error}")
+                  all_valid = False
+                  continue
+              else:
+                  print(f"  ✓ YAML syntax valid")
+              
+              # Check blueprint structure
+              valid, error = validate_blueprint_structure(filepath)
+              if not valid:
+                  print(f"  ❌ Blueprint structure error: {error}")
+                  all_valid = False
+              else:
+                  print(f"  ✓ Blueprint structure valid")
+              
+              print()
+          
+          if all_valid:
+              print("✅ All blueprints validated successfully!")
+              sys.exit(0)
+          else:
+              print("❌ Some blueprints failed validation")
+              sys.exit(1)
+          EOF
+          
+      - name: Check file organization
+        run: |
+          # Verify blueprints are in correct directories
+          echo "Checking file organization..."
+          
+          # Check automation blueprints
+          for file in blueprints/automation/**/*.yaml; do
+            if [ -f "$file" ]; then
+              if grep -q "domain: automation" "$file"; then
+                echo "✓ $file is correctly placed in automation/"
+              else
+                echo "❌ $file is in automation/ but domain is not 'automation'"
+                exit 1
+              fi
+            fi
+          done
+          
+          # Check script blueprints
+          for file in blueprints/script/**/*.yaml; do
+            if [ -f "$file" ]; then
+              if grep -q "domain: script" "$file"; then
+                echo "✓ $file is correctly placed in script/"
+              else
+                echo "❌ $file is in script/ but domain is not 'script'"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All files are correctly organized!"
