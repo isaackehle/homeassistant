@@ -1,0 +1,88 @@
+blueprint:
+  name: Door/Window Monitor with Notifications
+  description: |
+    Monitor door or window sensors and send notifications when they are opened.
+    Optionally send reminders if left open for too long.
+  domain: automation
+  author: Isaac Kehle
+  homeassistant:
+    min_version: "2024.1.0"
+  input:
+    door_window_entity:
+      name: Door/Window Sensor
+      description: The binary sensor to monitor
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class:
+                - door
+                - window
+                - opening
+    notify_service:
+      name: Notification Service
+      description: The notification service to use
+      default: notify.notify
+      selector:
+        text:
+    notification_title:
+      name: Notification Title
+      description: Title for the notification
+      default: "Security Alert"
+      selector:
+        text:
+    notification_message:
+      name: Notification Message
+      description: Message to send (use {{trigger.to_state.attributes.friendly_name}} for device name)
+      default: "{{trigger.to_state.attributes.friendly_name}} was opened"
+      selector:
+        text:
+          multiline: true
+    reminder_enabled:
+      name: Enable Reminder
+      description: Send reminder if left open
+      default: false
+      selector:
+        boolean:
+    reminder_delay:
+      name: Reminder Delay
+      description: How long to wait before sending reminder
+      default: 300
+      selector:
+        number:
+          min: 60
+          max: 3600
+          unit_of_measurement: seconds
+          mode: slider
+          step: 60
+    reminder_message:
+      name: Reminder Message
+      description: Message for reminder notification
+      default: "{{trigger.to_state.attributes.friendly_name}} has been open for {{reminder_delay}} seconds"
+      selector:
+        text:
+          multiline: true
+
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input door_window_entity
+    from: "off"
+    to: "on"
+
+action:
+  - service: !input notify_service
+    data:
+      title: !input notification_title
+      message: !input notification_message
+  - condition: template
+    value_template: "{{ reminder_enabled }}"
+  - delay: !input reminder_delay
+  - condition: state
+    entity_id: !input door_window_entity
+    state: "on"
+  - service: !input notify_service
+    data:
+      title: !input notification_title
+      message: !input reminder_message

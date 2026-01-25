@@ -1,0 +1,87 @@
+blueprint:
+  name: Motion-activated Light
+  description: |
+    Turn on a light when motion is detected and turn it off after a specified delay.
+    Supports multiple light entities and configurable timeout.
+  domain: automation
+  author: Isaac Kehle
+  homeassistant:
+    min_version: "2024.1.0"
+  input:
+    motion_entity:
+      name: Motion Sensor
+      description: The motion sensor that triggers the light
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: motion
+    light_target:
+      name: Light
+      description: The light(s) to control
+      selector:
+        target:
+          entity:
+            - domain: light
+    no_motion_wait:
+      name: Wait time
+      description: Time to leave the light on after last motion is detected
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+          mode: slider
+          step: 1
+    illuminance_sensor:
+      name: Illuminance Sensor (optional)
+      description: Only turn on light if illuminance is below threshold
+      default: {}
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: illuminance
+    illuminance_threshold:
+      name: Illuminance Threshold
+      description: Lux level below which the light will turn on
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lux
+          mode: slider
+          step: 10
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input motion_entity
+    from: "off"
+    to: "on"
+
+condition:
+  - condition: template
+    value_template: >
+      {% set illuminance_entity = states[input_illuminance_sensor] %}
+      {% if illuminance_entity is defined %}
+        {{ illuminance_entity.state | float(0) < input_illuminance_threshold | float(100) }}
+      {% else %}
+        true
+      {% endif %}
+
+action:
+  - service: light.turn_on
+    target: !input light_target
+  - wait_for_trigger:
+      platform: state
+      entity_id: !input motion_entity
+      from: "on"
+      to: "off"
+  - delay: !input no_motion_wait
+  - service: light.turn_off
+    target: !input light_target
