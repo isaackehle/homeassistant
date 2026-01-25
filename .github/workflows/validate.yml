@@ -16,6 +16,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     name: Validate Blueprint YAML Files
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
