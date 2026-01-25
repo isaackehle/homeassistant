@@ -65,6 +65,9 @@ blueprint:
 
 mode: single
 
+variables:
+  reminder_enabled: !input reminder_enabled
+
 trigger:
   - platform: state
     entity_id: !input door_window_entity

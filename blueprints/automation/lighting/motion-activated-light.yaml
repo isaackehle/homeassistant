@@ -58,6 +58,10 @@ blueprint:
 mode: restart
 max_exceeded: silent
 
+variables:
+  illuminance_sensor: !input illuminance_sensor
+  illuminance_threshold: !input illuminance_threshold
+
 trigger:
   - platform: state
     entity_id: !input motion_entity
@@ -67,15 +71,8 @@ trigger:
 condition:
   - condition: template
     value_template: >
-      {% set illuminance_sensor = !input illuminance_sensor %}
-      {% set illuminance_threshold = !input illuminance_threshold %}
       {% if illuminance_sensor %}
-        {% set illuminance_entity = states[illuminance_sensor] %}
-        {% if illuminance_entity is defined %}
-          {{ illuminance_entity.state | float(0) < illuminance_threshold | float(100) }}
-        {% else %}
-          true
-        {% endif %}
+        {{ states(illuminance_sensor) | float(0) < illuminance_threshold | float(100) }}
       {% else %}
         true
       {% endif %}

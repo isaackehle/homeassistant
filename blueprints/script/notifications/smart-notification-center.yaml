@@ -70,6 +70,12 @@ blueprint:
         boolean:
 
 sequence:
+  - variables:
+      mobile_notify: !input mobile_notify
+      tts_announce: !input tts_announce
+      persistent_notify: !input persistent_notify
+      notification_title: !input notification_title
+      notification_message: !input notification_message
   - choose:
       - conditions:
           - condition: template
