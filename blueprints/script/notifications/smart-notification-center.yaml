@@ -1,0 +1,113 @@
+blueprint:
+  name: Smart Notification Center
+  description: |
+    A reusable script for sending notifications with priority levels and multiple delivery methods.
+    Supports mobile notifications, TTS announcements, and persistent notifications.
+  domain: script
+  author: Isaac Kehle
+  homeassistant:
+    min_version: "2024.1.0"
+  input:
+    notification_title:
+      name: Notification Title
+      description: Title of the notification
+      selector:
+        text:
+    notification_message:
+      name: Notification Message
+      description: Message content
+      selector:
+        text:
+          multiline: true
+    priority_level:
+      name: Priority Level
+      description: Notification priority (low, normal, high, critical)
+      default: normal
+      selector:
+        select:
+          options:
+            - low
+            - normal
+            - high
+            - critical
+    mobile_notify:
+      name: Send Mobile Notification
+      description: Send to mobile device(s)
+      default: true
+      selector:
+        boolean:
+    mobile_service:
+      name: Mobile Notification Service
+      description: The mobile notification service
+      default: notify.mobile_app
+      selector:
+        text:
+    tts_announce:
+      name: TTS Announcement
+      description: Make a voice announcement
+      default: false
+      selector:
+        boolean:
+    tts_service:
+      name: TTS Service
+      description: The TTS service to use (e.g., tts.google_translate_say, tts.cloud_say)
+      default: tts.google_translate_say
+      selector:
+        text:
+    tts_entity:
+      name: TTS Entity
+      description: The media player for TTS
+      default: {}
+      selector:
+        entity:
+          filter:
+            - domain: media_player
+    persistent_notify:
+      name: Persistent Notification
+      description: Create persistent notification in UI
+      default: false
+      selector:
+        boolean:
+
+sequence:
+  - variables:
+      mobile_notify: !input mobile_notify
+      tts_announce: !input tts_announce
+      persistent_notify: !input persistent_notify
+      notification_title: !input notification_title
+      notification_message: !input notification_message
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ mobile_notify }}"
+        sequence:
+          - service: !input mobile_service
+            data:
+              title: !input notification_title
+              message: !input notification_message
+              data:
+                priority: !input priority_level
+                ttl: 0
+                importance: !input priority_level
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ tts_announce }}"
+        sequence:
+          - service: !input tts_service
+            data:
+              entity_id: !input tts_entity
+              message: "{{ notification_title }}. {{ notification_message }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ persistent_notify }}"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: !input notification_title
+              message: !input notification_message
+              notification_id: "{{ now().timestamp() | string }}"
+
+mode: parallel
+max: 10
