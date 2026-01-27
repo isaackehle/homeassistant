@@ -1,0 +1,27 @@
+blueprint:
+  name: Door Lock State Watcher
+  domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/blob/main/automation/door-lock/door-lock-state-watcher.yaml
+  input:
+    lock_entity:
+      name: Lock entity
+      selector:
+        entity:
+          domain: lock
+    notify_target:
+      name: Notification target
+      selector:
+        device:
+          integration: mobile_app
+
+trigger:
+  - platform: state
+    entity_id: !input lock_entity
+    from: 'locked'
+    to: 'unlocked'
+
+action:
+  - device_id: !input notify_target
+    domain: mobile_app
+    type: notify
+    message: 'Door unlocked'
