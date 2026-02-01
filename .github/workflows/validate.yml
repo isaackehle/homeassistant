@@ -18,21 +18,21 @@ jobs:
     name: Validate Blueprint YAML Files
     permissions:
       contents: read
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: '3.11'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyyaml
-          
+
       - name: Validate YAML syntax
         run: |
           python << 'EOF'
@@ -40,7 +40,7 @@ jobs:
           import sys
           import os
           from pathlib import Path
-          
+
           def validate_yaml_syntax(filepath):
               """Check basic YAML syntax (ignoring Home Assistant specific tags)"""
               try:
@@ -51,7 +51,7 @@ jobs:
                   return True, None
               except yaml.YAMLError as e:
                   return False, str(e)
-          
+
             PREFERRED_SOURCE_BASE = "https://github.com/isaackehle/homeassistant/"
             OLD_SOURCE_TOKEN = "homeassistant-blueprints"
 
@@ -62,16 +62,16 @@ jobs:
                       content = f.read()
                   # Parse with BaseLoader to handle !input tags
                   data = yaml.load(content, Loader=yaml.BaseLoader)
-                  
+
                   if 'blueprint' not in data:
                       return False, "Missing 'blueprint' key"
-                  
+
                   blueprint = data['blueprint']
                   if 'name' not in blueprint:
                       return False, "Missing 'blueprint.name'"
                   if 'domain' not in blueprint:
                       return False, "Missing 'blueprint.domain'"
-                  
+
                   # Check domain is valid
                   valid_domains = ['automation', 'script', 'template']
                   if blueprint['domain'] not in valid_domains:
@@ -83,24 +83,24 @@ jobs:
                         return False, f"source_url still points to old repo (contains '{OLD_SOURCE_TOKEN}'): {source_url}"
                       if not source_url.startswith(PREFERRED_SOURCE_BASE):
                         return False, f"source_url must start with {PREFERRED_SOURCE_BASE} (got: {source_url})"
-                  
+
                   return True, None
               except Exception as e:
                   return False, str(e)
-          
+
           # Find all YAML files in blueprints directory
           blueprint_files = list(Path('blueprints').rglob('*.yaml'))
-          
+
           if not blueprint_files:
               print("❌ No blueprint files found!")
               sys.exit(1)
-          
+
           print(f"Found {len(blueprint_files)} blueprint file(s) to validate\n")
-          
+
           all_valid = True
           for filepath in blueprint_files:
               print(f"Validating: {filepath}")
-              
+
               # Check YAML syntax
               valid, error = validate_yaml_syntax(filepath)
               if not valid:
@@ -109,7 +109,7 @@ jobs:
                   continue
               else:
                   print(f"  ✓ YAML syntax valid")
-              
+
               # Check blueprint structure
               valid, error = validate_blueprint_structure(filepath)
               if not valid:
@@ -117,9 +117,9 @@ jobs:
                   all_valid = False
               else:
                   print(f"  ✓ Blueprint structure valid")
-              
+
               print()
-          
+
           if all_valid:
               print("✅ All blueprints validated successfully!")
               sys.exit(0)
@@ -127,12 +127,12 @@ jobs:
               print("❌ Some blueprints failed validation")
               sys.exit(1)
           EOF
-          
+
       - name: Check file organization
         run: |
           # Verify blueprints are in correct directories
           echo "Checking file organization..."
-          
+
           # Check automation blueprints
           for file in blueprints/automation/**/*.yaml; do
             if [ -f "$file" ]; then
@@ -144,7 +144,7 @@ jobs:
               fi
             fi
           done
-          
+
           # Check script blueprints
           for file in blueprints/script/**/*.yaml; do
             if [ -f "$file" ]; then
@@ -156,5 +156,5 @@ jobs:
               fi
             fi
           done
-          
+
           echo "✅ All files are correctly organized!"
