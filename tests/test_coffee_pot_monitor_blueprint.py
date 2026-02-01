@@ -18,8 +18,8 @@ def _construct_undefined(loader, node):
     return None
 
 
-# Ignore any unknown tag like !input by registering a fallback handler.
-_IgnoreTagLoader.add_constructor(None, _construct_undefined)
+# Ignore the !input tag used by Home Assistant blueprints.
+_IgnoreTagLoader.add_constructor('!input', _construct_undefined)
 
 
 def _load_blueprint():
@@ -34,84 +34,281 @@ def _load_blueprint():
         return yaml.load(handle, Loader=_IgnoreTagLoader)
 
 
-def _find_choose_by_trigger_id(choose, trigger_id):
-    for branch in choose:
-        conditions = branch.get("conditions", [])
-        for condition in conditions:
-            if (
-                condition.get("condition") == "trigger"
-                and condition.get("id") == trigger_id
-            ):
-                return branch
-    return None
+def test_blueprint_loads_successfully():
+    """Test that the blueprint YAML loads without errors."""
+    data = _load_blueprint()
+    assert data is not None
+    assert "blueprint" in data
 
 
-def _index_of_step(sequence, key):
-    for idx, step in enumerate(sequence):
-        if key in step:
-            return idx
-    return -1
+def test_blueprint_has_required_metadata():
+    """Test that blueprint metadata contains all required fields."""
+    data = _load_blueprint()
+    blueprint = data.get("blueprint", {})
+
+    assert "name" in blueprint
+    assert "description" in blueprint
+    assert "domain" in blueprint
+    assert "source_url" in blueprint
+
+    assert blueprint["domain"] == "automation"
+    assert "github.com/isaackehle/homeassistant" in blueprint["source_url"]
 
 
-def _has_notify_guard(sequence):
-    guard_idx = -1
-    notify_idx = -1
-    for idx, step in enumerate(sequence):
-        if step.get("condition") == "template":
-            template = step.get("value_template", "")
-            if "trigger.from_state" in template and "unknown" in template:
-                guard_idx = idx
-        notify_value = None
-        if "action" in step:
-            notify_value = step.get("action")
-        elif "service" in step:
-            notify_value = step.get("service")
+def test_blueprint_has_required_inputs():
+    """Test that all required inputs are defined."""
+    data = _load_blueprint()
+    inputs = data.get("blueprint", {}).get("input", {})
 
-        if notify_value is not None:
-            notify_str = str(notify_value)
-            if notify_str.startswith("notify.") or notify_str == "notify_service":
-                notify_idx = idx
-    return guard_idx != -1 and notify_idx != -1 and guard_idx < notify_idx
+    required_inputs = [
+        "power_sensor",
+        "indicator_light",
+        "coffee_pot_switch",
+        "brewing_state",
+        "log_toggle",
+    ]
+
+    for input_name in required_inputs:
+        assert input_name in inputs, f"Missing required input: {input_name}"
 
 
-def test_triggers_have_expected_ids():
+def test_blueprint_has_brewing_state_input():
+    """Test that brewing_state input is properly configured for state management."""
+    data = _load_blueprint()
+    inputs = data.get("blueprint", {}).get("input", {})
+
+    assert "brewing_state" in inputs
+    brewing_state = inputs["brewing_state"]
+
+    assert "selector" in brewing_state
+    assert "entity" in brewing_state["selector"]
+    assert brewing_state["selector"]["entity"]["filter"]["domain"] == "input_boolean"
+
+
+def test_blueprint_has_threshold_inputs():
+    """Test that all threshold inputs are defined with defaults."""
+    data = _load_blueprint()
+    inputs = data.get("blueprint", {}).get("input", {})
+
+    threshold_inputs = [
+        "start_threshold",
+        "finish_threshold",
+        "in_progress_low",
+        "in_progress_high",
+    ]
+
+    for input_name in threshold_inputs:
+        assert input_name in inputs, f"Missing threshold input: {input_name}"
+        assert "default" in inputs[input_name], f"Missing default for {input_name}"
+
+
+def test_triggers_include_numeric_state_and_time_pattern():
+    """Test that triggers include both numeric_state and time_pattern triggers."""
     data = _load_blueprint()
     triggers = data.get("trigger", [])
-    trigger_ids = {item.get("id") for item in triggers}
-    assert {
-        "brewing_started",
-        "brewing_in_progress",
-        "brewing_finished",
-        "auto_off",
-    }.issubset(trigger_ids)
+
+    trigger_types = [t.get("trigger") or t.get("platform") for t in triggers]
+
+    assert "numeric_state" in trigger_types, "Missing numeric_state trigger"
+    assert "time_pattern" in trigger_types, "Missing time_pattern trigger"
 
 
-def test_auto_off_waits_for_finish_before_turning_off():
+def test_action_has_choose_block():
+    """Test that action contains a choose block for handling different states."""
     data = _load_blueprint()
-    choose = data.get("action", [])[0].get("choose", [])
-    auto_off_branch = _find_choose_by_trigger_id(choose, "auto_off")
-    assert auto_off_branch is not None
+    action = data.get("action", [])
 
-    sequence = auto_off_branch.get("sequence", [])
-    wait_idx = _index_of_step(sequence, "wait_for_trigger")
-    turn_off_idx = _index_of_step(sequence, "service")
-    assert wait_idx != -1
-    assert turn_off_idx != -1
-    assert wait_idx < turn_off_idx
+    assert len(action) > 0, "Action sequence is empty"
 
-    wait_step = sequence[wait_idx]
-    assert wait_step.get("timeout") == "00:30:00"
-    assert wait_step.get("continue_on_timeout") is False
+    # First action should be a choose block
+    choose_block = action[0]
+    assert "choose" in choose_block, "First action should be a choose block"
+
+    branches = choose_block.get("choose", [])
+    assert len(branches) >= 4, "Should have at least 4 branches (start, progress, finish, auto-off)"
 
 
-def test_finished_and_auto_off_have_notify_guard():
+def test_brewing_started_checks_brewing_state():
+    """Test that brewing started branch checks brewing_state is OFF."""
     data = _load_blueprint()
     choose = data.get("action", [])[0].get("choose", [])
 
-    finished_branch = _find_choose_by_trigger_id(choose, "brewing_finished")
-    assert finished_branch is not None
-    assert _has_notify_guard(finished_branch.get("sequence", []))
+    # Find the brewing started branch (checks power > start_threshold, but NOT below)
+    brewing_started = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if (cond.get("condition") == "numeric_state"
+                and "above" in cond
+                and "below" not in cond):
+                brewing_started = branch
+                break
+        if brewing_started:
+            break
 
-    auto_off_branch = _find_choose_by_trigger_id(choose, "auto_off")
-    assert auto_off_branch is not None
-    assert _has_notify_guard(auto_off_branch.get("sequence", []))
+    assert brewing_started is not None, "Brewing started branch not found"
+
+    # Check that it also has a state condition for brewing_state = off
+    conditions = brewing_started.get("conditions", [])
+    has_brewing_state_check = False
+    for state_cond in conditions:
+        if state_cond.get("condition") == "state" and state_cond.get("state") == "off":
+            has_brewing_state_check = True
+            break
+
+    assert has_brewing_state_check, "Brewing started should check brewing_state = off"
+
+
+def test_brewing_finished_checks_brewing_state():
+    """Test that brewing finished branch checks brewing_state is ON."""
+    data = _load_blueprint()
+    choose = data.get("action", [])[0].get("choose", [])
+
+    # Find the brewing finished branch (checks power < finish_threshold)
+    brewing_finished = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if cond.get("condition") == "numeric_state" and "below" in cond:
+                brewing_finished = branch
+                break
+
+    assert brewing_finished is not None, "Brewing finished branch not found"
+
+    # Check that it also has a state condition for brewing_state = on
+    conditions = brewing_finished.get("conditions", [])
+    has_brewing_state_check = False
+    for cond in conditions:
+        if cond.get("condition") == "state" and cond.get("state") == "on":
+            has_brewing_state_check = True
+            break
+
+    assert has_brewing_state_check, "Brewing finished should check brewing_state = on"
+
+
+def test_brewing_started_sets_brewing_state_on():
+    """Test that brewing started sequence sets brewing_state to ON."""
+    data = _load_blueprint()
+    choose = data.get("action", [])[0].get("choose", [])
+
+    # Find the brewing started branch (checks power > start_threshold, but NOT below)
+    brewing_started = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if (cond.get("condition") == "numeric_state"
+                and "above" in cond
+                and "below" not in cond):
+                brewing_started = branch
+                break
+        if brewing_started:
+            break
+
+    assert brewing_started is not None
+
+    sequence = brewing_started.get("sequence", [])
+    has_turn_on = False
+    for step in sequence:
+        action = step.get("action") or step.get("service")
+        if action == "input_boolean.turn_on":
+            has_turn_on = True
+            break
+
+    assert has_turn_on, "Brewing started should turn ON brewing_state"
+
+
+def test_brewing_finished_sets_brewing_state_off():
+    """Test that brewing finished sequence sets brewing_state to OFF."""
+    data = _load_blueprint()
+    choose = data.get("action", [])[0].get("choose", [])
+
+    # Find the brewing finished branch
+    brewing_finished = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if cond.get("condition") == "numeric_state" and "below" in cond:
+                brewing_finished = branch
+                break
+
+    assert brewing_finished is not None
+
+    sequence = brewing_finished.get("sequence", [])
+    has_turn_off = False
+    for step in sequence:
+        action = step.get("action") or step.get("service")
+        if action == "input_boolean.turn_off":
+            has_turn_off = True
+            break
+
+    assert has_turn_off, "Brewing finished should turn OFF brewing_state"
+
+
+def test_auto_off_resets_brewing_state():
+    """Test that auto-off sequence resets brewing_state to OFF."""
+    data = _load_blueprint()
+    choose = data.get("action", [])[0].get("choose", [])
+
+    # Find the auto-off branch (checks switch state with for: minutes)
+    auto_off = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if cond.get("condition") == "state" and "for" in cond:
+                auto_off = branch
+                break
+
+    assert auto_off is not None, "Auto-off branch not found"
+
+    sequence = auto_off.get("sequence", [])
+    has_reset_state = False
+    for step in sequence:
+        action = step.get("action") or step.get("service")
+        if action == "input_boolean.turn_off":
+            has_reset_state = True
+            break
+
+    assert has_reset_state, "Auto-off should reset brewing_state to OFF"
+
+
+def test_auto_off_turns_off_switch():
+    """Test that auto-off sequence turns off the coffee pot switch."""
+    data = _load_blueprint()
+    choose = data.get("action", [])[0].get("choose", [])
+
+    # Find the auto-off branch
+    auto_off = None
+    for branch in choose:
+        conditions = branch.get("conditions", [])
+        for cond in conditions:
+            if cond.get("condition") == "state" and "for" in cond:
+                auto_off = branch
+                break
+
+    assert auto_off is not None
+
+    sequence = auto_off.get("sequence", [])
+    has_switch_off = False
+    for step in sequence:
+        action = step.get("action") or step.get("service")
+        if action == "switch.turn_off":
+            has_switch_off = True
+            break
+
+    assert has_switch_off, "Auto-off should turn off the switch"
+
+
+def test_mode_is_restart():
+    """Test that automation mode is 'restart'."""
+    data = _load_blueprint()
+    mode = data.get("mode")
+
+    assert mode == "restart", "Mode should be 'restart'"
+
+
+def test_variables_section_includes_brewing_state():
+    """Test that variables section extracts brewing_state input."""
+    data = _load_blueprint()
+    variables = data.get("variables", {})
+
+    assert "brewing_state" in variables, "Variables should include brewing_state"

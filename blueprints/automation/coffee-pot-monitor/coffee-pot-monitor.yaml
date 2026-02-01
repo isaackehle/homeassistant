@@ -10,9 +10,9 @@ blueprint:
   domain: automation
   source_url: https://github.com/isaackehle/homeassistant/coffee-pot-monitor/coffee-pot-monitor.yaml
 
-  # -------------------------------------------------------
+  # -----------------------------------------------------------------------
   # INPUTS – what the user selects when they instantiate the blueprint
-  # ----------------------------------------
+  # -----------------------------------------------------------------------
   input:
     power_sensor:
       name: Power sensor
@@ -93,6 +93,21 @@ blueprint:
           filter:
             domain: switch
 
+    brewing_state:
+      name: Brewing state helper
+      description: |
+        REQUIRED - Input Boolean to track brewing state (prevents duplicate notifications).
+
+        Create this helper in Configuration → Helpers → Add Helper → Toggle.
+        The automation will turn this ON when brewing starts and OFF when finished.
+        This prevents the "Coffee is ready!" notification from repeating every minute.
+
+        Example: input_boolean.coffee_pot_brewing
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+
 variables:
   start_threshold: !input start_threshold
   finish_threshold: !input finish_threshold
@@ -101,6 +116,9 @@ variables:
 
   # For auto-off
   coffee_pot_switch: !input coffee_pot_switch
+
+  # For state tracking (prevents duplicate notifications)
+  brewing_state: !input brewing_state
 
 trigger:
   # 1️⃣ Brewing started
@@ -136,8 +154,16 @@ action:
           - condition: numeric_state
             entity_id: !input power_sensor
             above: !input start_threshold
+          # Only trigger if not already brewing (prevents duplicate start notifications)
+          - condition: state
+            entity_id: !input brewing_state
+            state: 'off'
         sequence:
           - delay: '00:00:02'
+          # Set brewing state to ON (tracks that we're in a brew cycle)
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input brewing_state
           - action: light.turn_on
             target:
               entity_id: !input indicator_light
@@ -196,8 +222,16 @@ action:
           - condition: state
             entity_id: !input coffee_pot_switch
             state: 'on'
+          # IMPORTANT: Only notify if we were actually brewing (prevents duplicate notifications)
+          - condition: state
+            entity_id: !input brewing_state
+            state: 'on'
         sequence:
           - delay: '00:00:02'
+          # Set brewing state to OFF (brew cycle complete, won't notify again)
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input brewing_state
           - action: light.turn_on
             target:
               entity_id: !input indicator_light
@@ -228,9 +262,13 @@ action:
             for:
               minutes: 15
         sequence:
-          - service: switch.turn_off
+          - action: switch.turn_off
             target:
               entity_id: !input coffee_pot_switch
+          # Reset brewing state (in case brew cycle didn't complete normally)
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input brewing_state
           - action: !input notify_service
             data:
               title: 'Coffee notification'
