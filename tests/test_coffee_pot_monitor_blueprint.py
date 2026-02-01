@@ -26,7 +26,6 @@ def _load_blueprint():
     path = (
         Path(__file__).parent.parent
         / "blueprints"
-        / "blueprints"
         / "automation"
         / "coffee-pot-monitor"
         / "coffee-pot-monitor.yaml"
