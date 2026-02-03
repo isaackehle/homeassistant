@@ -1,0 +1,15 @@
+{
+  "version": 3,
+  "skills": {
+    "homeassistant": {
+      "source": "openclaw/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/openclaw/skills.git",
+      "skillPath": "skills/dbhurley/homeassistant/SKILL.md",
+      "skillFolderHash": "32df245b67848604b013104aadf81453865ebd69",
+      "installedAt": "2026-02-03T03:30:08.049Z",
+      "updatedAt": "2026-02-03T03:37:53.829Z"
+    }
+  },
+  "dismissed": {}
+}
