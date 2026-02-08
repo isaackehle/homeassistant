@@ -1,0 +1,227 @@
+blueprint:
+  name: Ceiling Fan Direction Control with Safety
+  description: |
+    Safely changes ceiling fan direction by coordinating a fan controller and
+    a Shelly Plus 2PM Gen4 relay (in cover mode) that handles motor polarity reversal.
+
+    This blueprint ensures motor safety by:
+    1. Turning the fan OFF first
+    2. Waiting for the motor to fully stop (configurable delay)
+    3. Toggling the Shelly relay to reverse polarity
+    4. Waiting for the relay to settle (configurable delay)
+    5. Sending notifications when ready to use
+
+    The automation is triggered by an input_select helper that tracks the desired
+    fan direction (Forward/Summer vs Reverse/Winter). The Shelly relay in cover
+    mode provides electrical isolation during the polarity swap.
+
+    SAFETY: This automation uses mode: single to prevent overlapping direction
+    changes, which could damage the motor or relay contacts.
+  domain: automation
+  source_url: https://github.com/isaackehle/homeassistant/blueprints/automation/ceiling-fan/ceiling-fan-direction-control.yaml
+
+  # -------------------------------------------------------
+  # INPUTS – what the user selects when they instantiate the blueprint
+  # -------------------------------------------------------
+  input:
+    ceiling_fan:
+      name: Ceiling Fan
+      description: |
+        REQUIRED - The fan entity that will be turned OFF before changing direction.
+
+        This should be your Z-Wave fan controller, Zigbee fan, or other fan entity.
+        The automation will turn this OFF and wait before changing relay direction.
+
+        Example entities: fan.bedroom_ceiling_fan, fan.theater_ceiling_fan_north
+      selector:
+        entity:
+          filter:
+            domain: fan
+
+    direction_relay:
+      name: Direction Relay (Shelly Cover)
+      description: |
+        REQUIRED - The Shelly Plus 2PM Gen4 cover entity that controls motor polarity.
+
+        The Shelly must be configured in ROLLER/COVER mode (not switch mode).
+        - cover.open_cover = Forward (Summer) - pushes air down
+        - cover.close_cover = Reverse (Winter) - pulls air up
+
+        Example entities: cover.bedroom_fan_direction, cover.theater_fan_north_direction
+      selector:
+        entity:
+          filter:
+            domain: cover
+
+    direction_selector:
+      name: Direction Selector
+      description: |
+        REQUIRED - The input_select helper that tracks desired fan direction.
+
+        This helper should have exactly two options:
+        - "Forward (Summer)" - for downward airflow
+        - "Reverse (Winter)" - for upward airflow
+
+        Create this in Configuration → Helpers → Add Helper → Dropdown
+
+        Example entities: input_select.bedroom_fan_direction, input_select.theater_fan_north_direction
+      selector:
+        entity:
+          filter:
+            domain: input_select
+
+    notification_targets:
+      name: Notification Targets
+      description: |
+        OPTIONAL - One or more notification services to alert when direction change completes.
+
+        Select mobile devices, persistent notifications, or other notify services.
+        Leave empty to disable notifications.
+
+        Example: notify.mobile_app_iphone, notify.persistent_notification
+      default: []
+      selector:
+        target:
+          entity:
+            domain: notify
+
+    motor_stop_delay:
+      name: Motor Stop Delay
+      description: |
+        SAFETY DELAY - Time to wait after turning fan OFF before changing relay direction.
+
+        This ensures the motor has fully stopped spinning before reversing polarity.
+        Recommended: 10 seconds minimum for ceiling fan motors.
+
+        Increase this value if you hear clicking or grinding during direction changes.
+      default: 10
+      selector:
+        number:
+          min: 5
+          max: 30
+          step: 1
+          unit_of_measurement: seconds
+
+    relay_settle_delay:
+      name: Relay Settle Delay
+      description: |
+        SAFETY DELAY - Time to wait after relay switches before allowing fan operation.
+
+        This ensures the Shelly relay contacts have fully engaged before the fan
+        can be turned back on. Recommended: 3 seconds minimum.
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
+          unit_of_measurement: seconds
+
+    enable_notifications:
+      name: Enable Notifications
+      description: |
+        OPTIONAL - Enable/disable notification messages.
+
+        When enabled, sends alerts when direction change starts and completes.
+        When disabled, no notifications are sent (silent operation).
+      default: true
+      selector:
+        boolean:
+
+variables:
+  motor_stop_delay: !input motor_stop_delay
+  relay_settle_delay: !input relay_settle_delay
+  enable_notifications: !input enable_notifications
+  notification_targets: !input notification_targets
+  ceiling_fan: !input ceiling_fan
+  direction_relay: !input direction_relay
+
+trigger:
+  # 1️⃣ Direction selector changed
+  - trigger: state
+    entity_id: !input direction_selector
+    description: User changed the fan direction via input_select helper
+
+condition:
+  # ═══════════════════════════════════════════════════
+  # SAFETY CHECK - Only run if direction actually changed
+  # ═══════════════════════════════════════════════════
+  # This prevents the automation from running when the input_select
+  # is refreshed or restored after a restart with the same value.
+  - condition: template
+    value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+
+action:
+  # -------------------------------------------------
+  # 1️⃣ SAFETY: Turn off the fan first
+  # -------------------------------------------------
+  - action: fan.turn_off
+    target:
+      entity_id: !input ceiling_fan
+    data: {}
+
+  # Optional notification: Direction change started
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ enable_notifications and notification_targets | length > 0 }}"
+        sequence:
+          - action: notify.send_message
+            target: !input notification_targets
+            data:
+              title: "Fan Direction Change Started"
+              message: "🌀 {{ state_attr(direction_relay, 'friendly_name') }} - Changing to {{ trigger.to_state.state }}. Fan turned OFF for safety."
+
+  # -------------------------------------------------
+  # 2️⃣ SAFETY: Wait for motor to fully stop
+  # -------------------------------------------------
+  - delay:
+      seconds: "{{ motor_stop_delay }}"
+
+  # -------------------------------------------------
+  # 3️⃣ Change relay direction based on selection
+  # -------------------------------------------------
+  - choose:
+      # Reverse (Winter) - Pull air up toward ceiling
+      - conditions:
+          - condition: state
+            entity_id: !input direction_selector
+            state: "Reverse (Winter)"
+        sequence:
+          - action: cover.close_cover
+            target:
+              entity_id: !input direction_relay
+            data: {}
+
+      # Forward (Summer) - Push air down toward floor
+      - conditions:
+          - condition: state
+            entity_id: !input direction_selector
+            state: "Forward (Summer)"
+        sequence:
+          - action: cover.open_cover
+            target:
+              entity_id: !input direction_relay
+            data: {}
+
+  # -------------------------------------------------
+  # 4️⃣ SAFETY: Wait for relay to settle
+  # -------------------------------------------------
+  - delay:
+      seconds: "{{ relay_settle_delay }}"
+
+  # -------------------------------------------------
+  # 5️⃣ Notify user that fan is ready to use
+  # -------------------------------------------------
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ enable_notifications and notification_targets | length > 0 }}"
+        sequence:
+          - action: notify.send_message
+            target: !input notification_targets
+            data:
+              title: "Fan Direction Changed"
+              message: "✅ {{ state_attr(ceiling_fan, 'friendly_name') }} is now set to {{ trigger.to_state.state }}. Safe to turn on!"
+
+mode: single # Prevents overlapping direction changes which could damage the motor
