@@ -66,6 +66,7 @@ def test_blueprint_has_required_metadata():
     assert "name" in blueprint
     assert "description" in blueprint
     assert "domain" in blueprint
+    assert "author" in blueprint
     assert "source_url" in blueprint
 
     assert blueprint["domain"] == "automation"
@@ -105,29 +106,53 @@ def test_blueprint_has_optional_inputs():
     assert inputs["enable_notifications"]["default"] is True
 
 
+def test_uses_modern_yaml_syntax():
+    """Test that blueprint uses triggers/conditions/actions (not singular)."""
+    data = _load_blueprint()
+
+    assert "triggers" in data, "Should use 'triggers' (plural), not 'trigger'"
+    assert "trigger" not in data, "Should not use legacy 'trigger' (singular) at top level"
+
+    assert "conditions" in data, "Should use 'conditions' (plural), not 'condition'"
+    assert "condition" not in data, "Should not use legacy 'condition' (singular) at top level"
+
+    assert "actions" in data, "Should use 'actions' (plural), not 'action'"
+    assert "action" not in data, "Should not use legacy 'action' (singular) at top level"
+
+
+def test_triggers_use_trigger_not_platform():
+    """Test that trigger entries use 'trigger:' key, not legacy 'platform:'."""
+    data = _load_blueprint()
+    triggers = data.get("triggers", [])
+
+    for t in triggers:
+        assert "trigger" in t, "Each trigger should use 'trigger:' key, not 'platform:'"
+        assert "platform" not in t, "Should not use legacy 'platform:' key"
+
+
 def test_trigger_is_state_change():
     """Test that trigger is configured for input_select state changes."""
     data = _load_blueprint()
-    trigger = data.get("trigger", [])
+    triggers = data.get("triggers", [])
 
-    assert isinstance(trigger, list)
-    assert len(trigger) > 0
+    assert isinstance(triggers, list)
+    assert len(triggers) > 0
 
     # Should have a state trigger on direction_selector
-    state_trigger = trigger[0]
-    assert state_trigger.get("trigger") == "state" or state_trigger.get("platform") == "state"
+    state_trigger = triggers[0]
+    assert state_trigger.get("trigger") == "state"
 
 
 def test_condition_checks_state_actually_changed():
     """Test that condition verifies the state actually changed."""
     data = _load_blueprint()
-    condition = data.get("condition", [])
+    conditions = data.get("conditions", [])
 
-    assert isinstance(condition, list)
-    assert len(condition) > 0
+    assert isinstance(conditions, list)
+    assert len(conditions) > 0
 
     # Should have template condition checking from_state != to_state
-    template_condition = condition[0]
+    template_condition = conditions[0]
     assert template_condition.get("condition") == "template"
 
     template = template_condition.get("value_template", "")
@@ -139,7 +164,7 @@ def test_condition_checks_state_actually_changed():
 def test_action_sequence_has_correct_order():
     """Test that action sequence follows the safety protocol."""
     data = _load_blueprint()
-    action = data.get("action", [])
+    action = data.get("actions", [])
 
     # Find key steps in the sequence
     fan_off_idx = _index_of_action_containing(action, "fan.turn_off")
@@ -188,7 +213,7 @@ def test_action_sequence_has_correct_order():
 def test_choose_block_has_both_directions():
     """Test that choose block handles both Forward and Reverse directions."""
     data = _load_blueprint()
-    action = data.get("action", [])
+    action = data.get("actions", [])
 
     # Find the choose block that contains cover actions (relay control)
     relay_choose_step = None
@@ -250,7 +275,7 @@ def test_variables_section_exists():
 def test_notification_actions_use_targets():
     """Test that notification actions use the target parameter for multiple services."""
     data = _load_blueprint()
-    action = data.get("action", [])
+    action = data.get("actions", [])
 
     # Find notification actions (in choose blocks)
     notification_actions = []
@@ -276,7 +301,7 @@ def test_notification_actions_use_targets():
 def test_delays_use_variable_references():
     """Test that delay steps reference the configurable delay variables."""
     data = _load_blueprint()
-    action = data.get("action", [])
+    action = data.get("actions", [])
 
     # Find delay steps
     delay_steps = [step for step in action if "delay" in step]
