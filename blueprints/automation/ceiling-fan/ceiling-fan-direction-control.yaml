@@ -18,6 +18,7 @@ blueprint:
     SAFETY: This automation uses mode: single to prevent overlapping direction
     changes, which could damage the motor or relay contacts.
   domain: automation
+  author: isaackehle
   source_url: https://github.com/isaackehle/homeassistant/blueprints/automation/ceiling-fan/ceiling-fan-direction-control.yaml
 
   # -------------------------------------------------------
@@ -136,13 +137,13 @@ variables:
   ceiling_fan: !input ceiling_fan
   direction_relay: !input direction_relay
 
-trigger:
+triggers:
   # 1️⃣ Direction selector changed
   - trigger: state
     entity_id: !input direction_selector
     description: User changed the fan direction via input_select helper
 
-condition:
+conditions:
   # ═══════════════════════════════════════════════════
   # SAFETY CHECK - Only run if direction actually changed
   # ═══════════════════════════════════════════════════
@@ -151,7 +152,7 @@ condition:
   - condition: template
     value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
 
-action:
+actions:
   # -------------------------------------------------
   # 1️⃣ SAFETY: Turn off the fan first
   # -------------------------------------------------

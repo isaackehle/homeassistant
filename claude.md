@@ -29,6 +29,18 @@ tests/              # pytest suite validating blueprint structure
 - `source_url` must start with `https://github.com/isaackehle/homeassistant/`
 - Every blueprint directory must include a `README.md` with features, configuration, and troubleshooting
 
+## Blueprint YAML Syntax (HA 2024.10+)
+
+Use the modern YAML syntax introduced in Home Assistant 2024.10:
+
+| Old (deprecated) | New (current) |
+|---|---|
+| `trigger:` (top-level) | `triggers:` |
+| `- platform: state` | `- trigger: state` |
+| `condition:` (top-level) | `conditions:` |
+| `action:` (top-level) | `actions:` |
+| `service:` (in action steps) | `action:` |
+
 ## Blueprint YAML Patterns
 
 - Required inputs first, optional inputs (with `default:`) after
