@@ -41,6 +41,9 @@ jobs:
           import os
           from pathlib import Path
 
+          PREFERRED_SOURCE_BASE = "https://github.com/isaackehle/homeassistant/"
+          OLD_SOURCE_TOKEN = "homeassistant-blueprints"
+
           def validate_yaml_syntax(filepath):
               """Check basic YAML syntax (ignoring Home Assistant specific tags)"""
               try:
@@ -52,10 +55,7 @@ jobs:
               except yaml.YAMLError as e:
                   return False, str(e)
 
-            PREFERRED_SOURCE_BASE = "https://github.com/isaackehle/homeassistant/"
-            OLD_SOURCE_TOKEN = "homeassistant-blueprints"
-
-            def validate_blueprint_structure(filepath):
+          def validate_blueprint_structure(filepath):
               """Validate required blueprint fields"""
               try:
                   with open(filepath, 'r') as f:
@@ -77,12 +77,12 @@ jobs:
                   if blueprint['domain'] not in valid_domains:
                       return False, f"Invalid domain '{blueprint['domain']}'. Must be one of: {', '.join(valid_domains)}"
 
-                    source_url = blueprint.get('source_url')
-                    if source_url:
+                  source_url = blueprint.get('source_url')
+                  if source_url:
                       if OLD_SOURCE_TOKEN in source_url:
-                        return False, f"source_url still points to old repo (contains '{OLD_SOURCE_TOKEN}'): {source_url}"
+                          return False, f"source_url still points to old repo (contains '{OLD_SOURCE_TOKEN}'): {source_url}"
                       if not source_url.startswith(PREFERRED_SOURCE_BASE):
-                        return False, f"source_url must start with {PREFERRED_SOURCE_BASE} (got: {source_url})"
+                          return False, f"source_url must start with {PREFERRED_SOURCE_BASE} (got: {source_url})"
 
                   return True, None
               except Exception as e:

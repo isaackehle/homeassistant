@@ -40,14 +40,14 @@ blueprint:
           max: 300
           unit_of_measurement: seconds
 
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input target_entity
 
-action:
+actions:
   - delay:
       seconds: !input delay_seconds
-  - service: light.turn_on
+  - action: light.turn_on
     target:
       entity_id: !input target_entity
 ```
@@ -131,8 +131,8 @@ selector:
 ### Common Trigger Patterns
 ```yaml
 # State change
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.motion
     to: "on"
     from: "off"  # optional, but explicit is better
@@ -140,47 +140,47 @@ trigger:
       seconds: 5  # must be in state for duration
 
 # Numeric state (threshold)
-trigger:
-  - platform: numeric_state
+triggers:
+  - trigger: numeric_state
     entity_id: sensor.temperature
     above: 75
     below: 85  # optional range
 
 # Time pattern
-trigger:
-  - platform: time_pattern
+triggers:
+  - trigger: time_pattern
     minutes: "/5"  # every 5 minutes
 
 # Specific time
-trigger:
-  - platform: time
+triggers:
+  - trigger: time
     at: "07:00:00"
 
 # Sun events
-trigger:
-  - platform: sun
+triggers:
+  - trigger: sun
     event: sunset
     offset: "-00:30:00"  # 30 min before sunset
 
 # Template trigger
-trigger:
-  - platform: template
+triggers:
+  - trigger: template
     value_template: "{{ states('sensor.power') | float > 100 }}"
 
 # Device trigger (preferred for physical devices)
-trigger:
-  - platform: device
+triggers:
+  - trigger: device
     device_id: abc123
     domain: zwave_js
     type: event.value_notification.entry_control
 
 # Multiple triggers with IDs
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: binary_sensor.motion
     to: "on"
     id: motion_on
-  - platform: state
+  - trigger: state
     entity_id: binary_sensor.motion
     to: "off"
     for:
@@ -195,19 +195,19 @@ trigger:
 ### Common Condition Patterns
 ```yaml
 # State condition
-condition:
+conditions:
   - condition: state
     entity_id: input_boolean.vacation_mode
     state: "off"
 
 # Numeric state
-condition:
+conditions:
   - condition: numeric_state
     entity_id: sensor.illuminance
     below: 50
 
 # Time condition
-condition:
+conditions:
   - condition: time
     after: "08:00:00"
     before: "22:00:00"
@@ -219,18 +219,18 @@ condition:
       - fri
 
 # Sun condition
-condition:
+conditions:
   - condition: sun
     after: sunset
     before: sunrise
 
 # Template condition
-condition:
+conditions:
   - condition: template
     value_template: "{{ is_state('alarm_control_panel.home', 'armed_away') }}"
 
 # AND/OR logic
-condition:
+conditions:
   - condition: and
     conditions:
       - condition: state
@@ -244,7 +244,7 @@ condition:
             before: "06:00:00"
 
 # Trigger ID condition
-condition:
+conditions:
   - condition: trigger
     id: motion_on
 ```
@@ -256,8 +256,8 @@ condition:
 ### Common Action Patterns
 ```yaml
 # Service call
-action:
-  - service: light.turn_on
+actions:
+  - action: light.turn_on
     target:
       entity_id: light.living_room
     data:
@@ -265,63 +265,63 @@ action:
       transition: 2
 
 # Dynamic target from input
-action:
-  - service: light.turn_on
+actions:
+  - action: light.turn_on
     target:
       entity_id: !input target_light
 
 # Choose based on trigger
-action:
+actions:
   - choose:
       - conditions:
           - condition: trigger
             id: motion_on
         sequence:
-          - service: light.turn_on
+          - action: light.turn_on
             target:
               entity_id: !input target_light
       - conditions:
           - condition: trigger
             id: motion_off
         sequence:
-          - service: light.turn_off
+          - action: light.turn_off
             target:
               entity_id: !input target_light
     default:
-      - service: notify.notify
+      - action: notify.notify
         data:
           message: "Unknown trigger"
 
 # If/then/else
-action:
+actions:
   - if:
       - condition: state
         entity_id: binary_sensor.door
         state: "on"
     then:
-      - service: notify.mobile_app
+      - action: notify.mobile_app
         data:
           message: "Door is open!"
     else:
-      - service: notify.mobile_app
+      - action: notify.mobile_app
         data:
           message: "Door is closed"
 
 # Repeat
-action:
+actions:
   - repeat:
       count: 3
       sequence:
-        - service: light.toggle
+        - action: light.toggle
           target:
             entity_id: light.alert
         - delay:
           seconds: 1
 
 # Wait for trigger
-action:
+actions:
   - wait_for_trigger:
-      - platform: state
+      - trigger: state
         entity_id: binary_sensor.door
         to: "off"
     timeout:
@@ -329,20 +329,20 @@ action:
     continue_on_timeout: true
 
 # Variables
-action:
+actions:
   - variables:
       light_brightness: "{{ states('sensor.illuminance') | int }}"
-  - service: light.turn_on
+  - action: light.turn_on
     data:
       brightness: "{{ 255 - light_brightness }}"
 
 # Parallel execution
-action:
+actions:
   - parallel:
-      - service: light.turn_on
+      - action: light.turn_on
         target:
           entity_id: light.room_1
-      - service: light.turn_on
+      - action: light.turn_on
         target:
           entity_id: light.room_2
 ```
@@ -428,8 +428,8 @@ mode: parallel    # Run multiple instances
 ### Error Handling
 ```yaml
 # Continue on error
-action:
-  - service: notify.mobile_app
+actions:
+  - action: notify.mobile_app
     data:
       message: "Test"
     continue_on_error: true
