@@ -7,7 +7,7 @@ blueprint:
     Supports manual "run now" triggers and override bypass.
     Simplified with helper variables for improved maintainability.
   domain: automation
-  source_url: https://github.com/isaackehle/homeassistant/door-lock/door-lock-with-multiple-inputs.yaml
+  source_url: https://github.com/isaackehle/homeassistant/door_locks/door_lock_with_multiple_inputs.yaml
 
   input:
     lock_entity:

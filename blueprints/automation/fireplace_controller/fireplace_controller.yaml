@@ -10,7 +10,7 @@ blueprint:
 
     Can use internal fireplace temperature, external room temperature, or both.
   domain: automation
-  source_url: https://github.com/isaackehle/homeassistant/fireplace-controller/fireplace-controller.yaml
+  source_url: https://github.com/isaackehle/homeassistant/fireplace_controller/fireplace_controller.yaml
 
   input:
     # ═══════════════════════════════════════════════════════════════════════════

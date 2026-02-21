@@ -23,13 +23,7 @@ _IgnoreTagLoader.add_constructor('!input', _construct_undefined)
 
 
 def _load_blueprint():
-    path = (
-        Path(__file__).parent.parent
-        / "blueprints"
-        / "automation"
-        / "coffee-pot-monitor"
-        / "coffee-pot-monitor.yaml"
-    )
+    path = Path(__file__).parent / "coffee_pot_monitor.yaml"
     with path.open() as handle:
         return yaml.load(handle, Loader=_IgnoreTagLoader)
 

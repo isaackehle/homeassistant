@@ -223,7 +223,7 @@ The `brewing_state` helper prevents duplicate notifications:
 1. **Import Blueprint**:
    - Go to **Settings → Automations & Scenes → Blueprints**
    - Click **Import Blueprint**
-   - Enter URL: `https://github.com/isaackehle/homeassistant/blueprints/automation/coffee-pot-monitor/coffee-pot-monitor.yaml`
+   - Enter URL: `https://github.com/isaackehle/homeassistant/blueprints/automation/coffee_pot_monitor/coffee_pot_monitor.yaml`
 
 2. **Create Automation**:
    - Go to **Settings → Automations & Scenes**

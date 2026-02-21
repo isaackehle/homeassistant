@@ -1,6 +1,7 @@
 # Testing Automations
 
-This directory contains pytest tests for Home Assistant automations.
+This directory contains shared pytest helpers and non-blueprint tests.
+Blueprint tests are colocated next to each blueprint file in `blueprints/`.
 
 ## Setup
 
@@ -21,6 +22,9 @@ pytest --cov=. --cov-report=html
 
 # Run specific test file
 pytest tests/test_example_automation.py
+
+# Run a colocated blueprint test
+pytest blueprints/automation/coffee_pot_monitor/test_coffee_pot_monitor_blueprint.py
 
 # Run in verbose mode
 pytest -v

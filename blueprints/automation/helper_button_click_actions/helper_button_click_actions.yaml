@@ -6,7 +6,7 @@ blueprint:
       - KeyPressed for single click
       - KeyPressed2x for double click
   domain: automation
-  source_url: 'https://github.com/isaackehle/homeassistant/helper-button-click-actions/helper-button-click-actions-blueprint.yaml'
+  source_url: 'https://github.com/isaackehle/homeassistant/helper_button_click_actions/helper_button_click_actions.yaml'
 
   input:
     button_entity:
