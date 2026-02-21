@@ -88,8 +88,8 @@ jobs:
               except Exception as e:
                   return False, str(e)
 
-          # Find all YAML files in blueprints directory
-          blueprint_files = list(Path('blueprints').rglob('*.yaml'))
+          # Find all blueprint YAML files (ignore directories that end with .yaml)
+          blueprint_files = [p for p in Path('blueprints').rglob('*.yaml') if p.is_file()]
 
           if not blueprint_files:
               print("❌ No blueprint files found!")

@@ -1,0 +1,136 @@
+blueprint:
+  name: Scheduled Lock Controller
+  description: Lock a list of locks at a specified time, with retry logic and notifications
+  domain: automation
+  input:
+    lock_time:
+      name: Time to Lock
+      description: Time at which all locks should be locked
+      selector:
+        time:
+      default: "22:30:00"
+    locks:
+      name: Locks to Control
+      description: List of locks to lock (entity_id format)
+      selector:
+        entity:
+          filter:
+            - domain: lock
+          multiple: true
+    lock_retry_delay:
+      name: Retry Delay
+      description: Time to wait before checking if lock succeeded and retrying
+      selector:
+        duration:
+      default:
+        seconds: 30
+    lock_retries:
+      name: Number of Retries
+      description: Number of times to retry a failed lock attempt
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 1
+          unit_of_measurement: retries
+          mode: slider
+      default: 2
+    notify_service:
+      name: Notification Service (Optional)
+      description: Service to use for notifications (e.g., notify.mobile_app_isaac_iphone_16)
+      selector:
+        text:
+      default: ""
+    notify_on_failure_only:
+      name: Notify on Failure Only
+      description: Only send notification if a lock fails
+      selector:
+        boolean:
+      default: true
+
+trigger:
+  - trigger: time
+    at: !input lock_time
+
+action:
+  - if:
+      - condition: template
+        value_template: "{{ notify_service != '' }}"
+    then:
+      - action: "{{ notify_service }}"
+        data:
+          message: "Scheduled lock initiated for {{ locks | length }} lock(s)"
+
+  - alias: "Lock all doors in parallel"
+    action: homeassistant.turn_on
+    target:
+      entity_id: !input locks
+    data:
+      method: toggle
+
+  - alias: "Wait before checking lock status"
+    delay: !input lock_retry_delay
+
+  - repeat:
+      for_each: !input locks
+      sequence:
+        - alias: "Check if {{ repeat.item }} locked"
+          if:
+            - condition: state
+              entity_id: "{{ repeat.item }}"
+              state: "locked"
+          then:
+            - alias: "Lock succeeded"
+              if:
+                - condition: template
+                  value_template: "{{ notify_service != '' and not notify_on_failure_only }}"
+              then:
+                - action: "{{ notify_service }}"
+                  data:
+                    message: "{{ repeat.item }} locked successfully"
+          else:
+            - alias: "Lock failed - retry loop"
+              repeat:
+                count: !input lock_retries
+                sequence:
+                  - alias: "Wait before retry"
+                    delay: !input lock_retry_delay
+
+                  - alias: "Retry lock {{ repeat.item }}"
+                    action: homeassistant.turn_on
+                    target:
+                      entity_id: "{{ repeat.item }}"
+                    data:
+                      method: toggle
+
+                  - alias: "Wait after retry attempt"
+                    delay: !input lock_retry_delay
+
+                  - alias: "Check if retry succeeded"
+                    if:
+                      - condition: state
+                        entity_id: "{{ repeat.item }}"
+                        state: "locked"
+                    then:
+                      - alias: "Retry succeeded"
+                        repeat:
+                          until:
+                            - condition: template
+                              value_template: "{{ true }}"
+                          sequence: []
+
+            - if:
+                - condition: template
+                  value_template: "{{ notify_service != '' }}"
+              then:
+                - if:
+                    - condition: state
+                      entity_id: "{{ repeat.item }}"
+                      state: "locked"
+                  then: []
+                  else:
+                    - action: "{{ notify_service }}"
+                      data:
+                        message: "⚠️ Failed to lock {{ repeat.item }} after {{ lock_retries }} retry(ies)"
+
+mode: single
