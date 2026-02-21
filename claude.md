@@ -22,7 +22,7 @@ tests/              # pytest suite validating blueprint structure
 
 ## Blueprint Conventions
 
-- **Filenames**: kebab-case (e.g., `coffee-pot-monitor.yaml`)
+- **Filenames**: kebab-case (e.g., `coffee_pot_monitor.yaml`)
 - **Directories**: one directory per blueprint, matching the blueprint filename
 - **Domain placement**: automation blueprints go in `blueprints/automation/`, scripts in `blueprints/script/`
 - Every blueprint YAML must include: `blueprint.name`, `blueprint.domain`, `blueprint.description`, `blueprint.author`, `blueprint.source_url`
