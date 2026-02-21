@@ -14,7 +14,7 @@ A comprehensive Home Assistant automation blueprint for controlling lights based
 
 ## Installation
 
-1. Copy `lights-controller.yaml` to your Home Assistant blueprints directory
+1. Copy `lights_controller.yaml` to your Home Assistant blueprints directory
 2. In Home Assistant, go to **Settings > Automations & Scenes > Create Automation > Create from Blueprint**
 3. Select "Lights Controller" blueprint
 4. Configure the required and optional inputs (see Configuration section below)

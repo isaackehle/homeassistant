@@ -8,7 +8,7 @@ blueprint:
     blueprint inputs, so the same blueprint can be reused for any
     appliance.
   domain: automation
-  source_url: https://github.com/isaackehle/homeassistant/coffee-pot-monitor/coffee-pot-monitor.yaml
+  source_url: https://github.com/isaackehle/homeassistant/coffee_pot_monitor/coffee_pot_monitor.yaml
 
   # -----------------------------------------------------------------------
   # INPUTS – what the user selects when they instantiate the blueprint
