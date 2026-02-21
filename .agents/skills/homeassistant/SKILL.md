@@ -403,7 +403,7 @@ actions:
 ## Best Practices
 
 ### Naming Conventions
-- **Blueprints**: `kebab-case.yaml` (e.g., `motion-activated-light.yaml`)
+- **Blueprints**: `snake_case.yaml` (e.g., `motion_activated_light.yaml`)
 - **Automations**: Descriptive names with location (e.g., "Kitchen Motion Light")
 - **Helpers**: Prefix with purpose (e.g., `input_boolean.vacation_mode`)
 

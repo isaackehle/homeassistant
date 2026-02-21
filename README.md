@@ -27,3 +27,11 @@ Contributions welcome! Please ensure blueprints include:
 - Input descriptions with examples
 - README with usage instructions
 - Tests validating blueprint structure
+
+## AI Tooling
+
+Repository usage guidance for AI assistants:
+
+- Canonical: `.agents/skills/repo-usage/SKILL.md`
+- Codex: `.codex/skills/repo-usage/SKILL.md`
+- Claude: `.claude/skills/repo-usage/SKILL.md`

@@ -10,19 +10,20 @@ Public collection of reusable Home Assistant automation and script blueprints.
 blueprints/
   automation/       # Automation blueprints (domain: automation)
     <name>/
-      <name>.yaml   # Blueprint file
-      README.md     # Documentation
+      <name>.yaml
+      README.md
+      test_*_blueprint.py  # Colocated blueprint tests
   script/           # Script blueprints (domain: script)
     <name>/
       <name>.yaml
       README.md
-tests/              # pytest suite validating blueprint structure
+tests/              # Shared pytest fixtures/helpers and non-blueprint tests
 .github/workflows/  # CI: YAML validation, structure checks, file organization
 ```
 
 ## Blueprint Conventions
 
-- **Filenames**: kebab-case (e.g., `coffee-pot-monitor.yaml`)
+- **Filenames**: kebab-case (e.g., `coffee_pot_monitor.yaml`)
 - **Directories**: one directory per blueprint, matching the blueprint filename
 - **Domain placement**: automation blueprints go in `blueprints/automation/`, scripts in `blueprints/script/`
 - Every blueprint YAML must include: `blueprint.name`, `blueprint.domain`, `blueprint.description`, `blueprint.author`, `blueprint.source_url`
@@ -58,7 +59,15 @@ Use the modern YAML syntax introduced in Home Assistant 2024.10:
 - Run tests: `python -m pytest`
 - Tests validate YAML structure, metadata, inputs, triggers, actions, and state logic
 - Custom YAML loader handles `!input` tags via `yaml.SafeLoader.add_constructor`
-- New blueprints should have corresponding test files in `tests/`
+- New blueprints should have corresponding colocated tests in the same blueprint directory
+
+## Skills
+
+For AI tool onboarding and repo usage conventions, use:
+
+- `.agents/skills/repo-usage/SKILL.md` (canonical)
+- `.codex/skills/repo-usage/SKILL.md`
+- `.claude/skills/repo-usage/SKILL.md`
 
 ## CI Validation (.github/workflows/validate.yml)
 
