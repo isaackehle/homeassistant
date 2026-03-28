@@ -1,0 +1,427 @@
+blueprint:
+  name: Bathroom Exhaust Controller with Steam-Shower Bypass and Timer
+  description: |
+    Controls a bathroom exhaust fan from a humidity sensor, a manual-run helper,
+    and a steam-shower bypass helper with a visible timer.
+
+    Behavior:
+    - Turns the fan on when humidity rises above the configured threshold, unless bypass is on.
+    - Turns the fan off when humidity stays below the configured threshold for the configured delay,
+      unless the manual-run helper is still on.
+    - Turns the fan on immediately when the manual-run helper turns on.
+    - Automatically turns the manual-run helper off after the configured runtime.
+    - Forces the fan off while steam-shower bypass is on.
+    - Uses a timer helper so the remaining steam-shower time is visible in the UI.
+    - Optionally rechecks whether steam mode is still active before restoring the exhaust fan.
+    - Optionally announces when steam mode ends and the exhaust fan is back on.
+  domain: automation
+  author: isaackehle
+  source_url: https://github.com/isaackehle/homeassistant/blob/main/blueprints/automation/exhaust_fan/bathroom_exhaust_controller.yaml
+
+  input:
+    humidity_sensor:
+      name: Humidity Sensor
+      description: Sensor used to decide when the fan should turn on or off.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+
+    exhaust_fan:
+      name: Exhaust Fan
+      description: Fan or switch entity that powers the bathroom exhaust.
+      selector:
+        entity:
+          filter:
+            domain:
+              - fan
+              - switch
+
+    manual_run_helper:
+      name: Manual Run Helper
+      description: |
+        Input Boolean used for manual fan runs and post-steam-shower run-on time.
+        When this helper turns on, the fan turns on immediately.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+
+    steam_shower_bypass:
+      name: Steam Shower Bypass
+      description: |
+        Input Boolean that disables humidity-based control while a steam shower is active.
+        When this helper is on, the fan is forced off.
+      selector:
+        entity:
+          filter:
+            domain: input_boolean
+
+    steam_shower_timer:
+      name: Steam Shower Timer
+      description: |
+        Timer helper used to show the remaining steam-shower time in Home Assistant.
+        This blueprint starts, restarts, and cancels the timer as needed.
+      selector:
+        entity:
+          filter:
+            domain: timer
+
+    humidity_turn_on:
+      name: Turn-On Humidity
+      description: Turn the fan on when humidity rises above this value.
+      default: 60
+      selector:
+        number:
+          min: 30
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+
+    humidity_turn_off:
+      name: Turn-Off Humidity
+      description: Turn the fan off after humidity stays below this value for the delay below.
+      default: 40
+      selector:
+        number:
+          min: 30
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+
+    humidity_turn_off_delay:
+      name: Turn-Off Delay
+      description: Minutes humidity must stay below the turn-off threshold before the fan turns off.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: minutes
+
+    manual_run_minutes:
+      name: Manual Run Time
+      description: Minutes the manual-run helper should stay on before it is automatically turned off.
+      default: 40
+      selector:
+        number:
+          min: 1
+          max: 240
+          step: 1
+          unit_of_measurement: minutes
+
+    steam_shower_duration:
+      name: Steam Shower Duration
+      description: Minutes to run the steam-shower timer when steam mode starts.
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 240
+          step: 1
+          unit_of_measurement: minutes
+
+    post_steam_resume_delay:
+      name: Post-Steam Resume Delay
+      description: Minutes to wait after steam mode ends before the exhaust fan is allowed back on.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          unit_of_measurement: minutes
+
+    steam_active_entity:
+      name: Steam Still Active Sensor
+      description: |
+        Optional binary sensor or input boolean that stays on while the steam shower is still active.
+        If configured and on when the timer expires, the timer will be restarted instead of resuming the fan.
+      default: []
+      selector:
+        entity:
+          filter:
+            domain:
+              - binary_sensor
+              - input_boolean
+
+    steam_recheck_minutes:
+      name: Steam Recheck Interval
+      description: Minutes to wait before checking again when steam is still active.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          unit_of_measurement: minutes
+
+    enable_announcements:
+      name: Enable Steam-End Announcement
+      description: Speak a TTS message when steam mode ends and the exhaust fan resumes.
+      default: false
+      selector:
+        boolean:
+
+    announcement_service:
+      name: TTS Service
+      description: |
+        Optional TTS service for announcements, for example `tts.google_translate_say`
+        or another `tts.*_say` service that accepts `entity_id` and `message`.
+      default: ""
+      selector:
+        text:
+
+    announcement_players:
+      name: Announcement Players
+      description: Optional media players that should receive the steam-end TTS message.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: media_player
+
+    announcement_message:
+      name: Announcement Message
+      description: Spoken message sent when steam mode ends and the exhaust fan resumes.
+      default: Steam shower is off. Bathroom exhaust fan is back on.
+      selector:
+        text:
+          multiline: true
+
+variables:
+  steam_active_entity: !input steam_active_entity
+  enable_announcements: !input enable_announcements
+  announcement_service: !input announcement_service
+  announcement_players: !input announcement_players
+  steam_duration_minutes: !input steam_shower_duration
+  steam_recheck_duration_minutes: !input steam_recheck_minutes
+
+triggers:
+  - id: humidity_high
+    trigger: numeric_state
+    entity_id: !input humidity_sensor
+    above: !input humidity_turn_on
+
+  - id: humidity_low
+    trigger: numeric_state
+    entity_id: !input humidity_sensor
+    below: !input humidity_turn_off
+    for:
+      minutes: !input humidity_turn_off_delay
+
+  - id: manual_run_on
+    trigger: state
+    entity_id: !input manual_run_helper
+    to: "on"
+
+  - id: manual_run_timeout
+    trigger: state
+    entity_id: !input manual_run_helper
+    to: "on"
+    for:
+      minutes: !input manual_run_minutes
+
+  - id: manual_run_off
+    trigger: state
+    entity_id: !input manual_run_helper
+    to: "off"
+
+  - id: bypass_on
+    trigger: state
+    entity_id: !input steam_shower_bypass
+    to: "on"
+
+  - id: bypass_off
+    trigger: state
+    entity_id: !input steam_shower_bypass
+    to: "off"
+
+  - id: steam_timer_finished
+    trigger: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input steam_shower_timer
+
+conditions: []
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: humidity_high
+          - condition: state
+            entity_id: !input steam_shower_bypass
+            state: "off"
+        sequence:
+          - action: homeassistant.turn_on
+            target:
+              entity_id: !input exhaust_fan
+
+      - conditions:
+          - condition: trigger
+            id: humidity_low
+          - condition: state
+            entity_id: !input steam_shower_bypass
+            state: "off"
+          - condition: state
+            entity_id: !input manual_run_helper
+            state: "off"
+        sequence:
+          - action: homeassistant.turn_off
+            target:
+              entity_id: !input exhaust_fan
+
+      - conditions:
+          - condition: trigger
+            id: manual_run_on
+          - condition: state
+            entity_id: !input steam_shower_bypass
+            state: "off"
+        sequence:
+          - action: homeassistant.turn_on
+            target:
+              entity_id: !input exhaust_fan
+
+      - conditions:
+          - condition: trigger
+            id: manual_run_timeout
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input manual_run_helper
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input steam_shower_bypass
+                    state: "on"
+                sequence:
+                  - action: homeassistant.turn_off
+                    target:
+                      entity_id: !input exhaust_fan
+              - conditions:
+                  - condition: numeric_state
+                    entity_id: !input humidity_sensor
+                    below: !input humidity_turn_off
+                sequence:
+                  - action: homeassistant.turn_off
+                    target:
+                      entity_id: !input exhaust_fan
+
+      - conditions:
+          - condition: trigger
+            id: manual_run_off
+          - condition: state
+            entity_id: !input steam_shower_bypass
+            state: "off"
+          - condition: numeric_state
+            entity_id: !input humidity_sensor
+            below: !input humidity_turn_off
+        sequence:
+          - action: homeassistant.turn_off
+            target:
+              entity_id: !input exhaust_fan
+
+      - conditions:
+          - condition: trigger
+            id: bypass_on
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input manual_run_helper
+          - action: homeassistant.turn_off
+            target:
+              entity_id: !input exhaust_fan
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input steam_shower_timer
+                    state: idle
+                sequence:
+                  - action: timer.start
+                    target:
+                      entity_id: !input steam_shower_timer
+                    data:
+                      duration: "{{ '%02d:%02d:00' | format(steam_duration_minutes // 60, steam_duration_minutes % 60) }}"
+
+      - conditions:
+          - condition: trigger
+            id: steam_timer_finished
+          - condition: state
+            entity_id: !input steam_shower_bypass
+            state: "on"
+        sequence:
+          - choose:
+              - conditions:
+                  - "{{ steam_active_entity | length > 0 }}"
+                  - condition: state
+                    entity_id: !input steam_active_entity
+                    state: "on"
+                sequence:
+                  - action: timer.start
+                    target:
+                      entity_id: !input steam_shower_timer
+                    data:
+                      duration: "{{ '%02d:%02d:00' | format(steam_recheck_duration_minutes // 60, steam_recheck_duration_minutes % 60) }}"
+              - conditions:
+                  - "{{ steam_active_entity | length == 0 or not is_state(steam_active_entity, 'on') }}"
+                sequence:
+                  - delay:
+                      minutes: !input post_steam_resume_delay
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: !input manual_run_helper
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: !input steam_shower_bypass
+                  - action: homeassistant.turn_on
+                    target:
+                      entity_id: !input exhaust_fan
+                  - choose:
+                      - conditions:
+                          - "{{ enable_announcements }}"
+                          - "{{ announcement_service | length > 0 }}"
+                          - "{{ announcement_players | length > 0 }}"
+                        sequence:
+                          - service: !input announcement_service
+                            data:
+                              entity_id: !input announcement_players
+                              message: !input announcement_message
+
+      - conditions:
+          - condition: trigger
+            id: bypass_off
+        sequence:
+          - action: timer.cancel
+            target:
+              entity_id: !input steam_shower_timer
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input manual_run_helper
+                    state: "on"
+                sequence:
+                  - action: homeassistant.turn_on
+                    target:
+                      entity_id: !input exhaust_fan
+              - conditions:
+                  - condition: numeric_state
+                    entity_id: !input humidity_sensor
+                    above: !input humidity_turn_on
+                sequence:
+                  - action: homeassistant.turn_on
+                    target:
+                      entity_id: !input exhaust_fan
+              - conditions:
+                  - condition: numeric_state
+                    entity_id: !input humidity_sensor
+                    below: !input humidity_turn_off
+                sequence:
+                  - action: homeassistant.turn_off
+                    target:
+                      entity_id: !input exhaust_fan
+
+mode: queued
+max: 10
