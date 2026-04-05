@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "skills": {
+    "home-assistant-automation-scripts": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "78d44b9b5da6ca355f0bc67fd72eb2e2f290e4292b93989cb0d24c2f6b731350"
+    },
+    "home-assistant-best-practices": {
+      "source": "homeassistant-ai/skills",
+      "sourceType": "github",
+      "computedHash": "af0379532b193a6c81c8df1cf21c5f192b432789d87a88a2a773e7daab7c7c14"
+    },
+    "home-assistant-custom-integration": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "98e60cb77b2b9b0759f082191ecbb9241db8ff5e55dd05edca0a8fb59d6228ea"
+    },
+    "home-assistant-dashboards-cards": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "4fc51cd2074a18ef807dea244007e7c8a3a8cf22bfe020f56ef1db8f315bc89b"
+    },
+    "home-assistant-entities-services": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "d5b9b3c1b70214ea896ffbab9f6bad0024e46d236e58f3ac99f3c4d568d613e9"
+    },
+    "home-assistant-esphome": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "b40ee0998d3fd4801369fbd290c07f7899f7499755d827e57dcbfd3da3ea814a"
+    },
+    "home-assistant-integrations-addons": {
+      "source": "bradsjm/hassio-addons",
+      "sourceType": "github",
+      "computedHash": "12fca1c4fc3bda15b0298f635542c073c0100f42196e8ff9af44d69ec6a1ff11"
+    }
+  }
+}
