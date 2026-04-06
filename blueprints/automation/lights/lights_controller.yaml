@@ -1,726 +1,826 @@
 blueprint:
-  name: Room-style lights controller
-  description: |
+  name: Lights controller
+  description: >
     • Reacts to doors, motion, button presses, and a timer.
+
     • Optional bypass flag (input_boolean) that can be toggled by double-tap
       events or by a dedicated *Bypass action sensor* array.
+
     • The *Bypass action sensor* array watches any number of entities whose
       state can be "single", "double", "unknown" or "unavailable".
       - "single"  → enable bypass (turn ON the bypass boolean)
       - "double"  → disable bypass (turn OFF the bypass boolean)
       - other states are ignored.
+
+    • Optional max-on safety shutoff: forces lights off after a configurable
+      duration with an optional warning period and notification.
+
+    • Optional fallback shutoff: forces lights off at a configurable time every night.
+
     • All steps use the modern `action:` syntax.
+
+  source_url: "https://github.com/isaackehle/homeassistant/lights/lights_controller.yaml"
   domain: automation
-  source_url: https://github.com/isaackehle/homeassistant/lights/lights_controller.yaml
 
   input:
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # SENSOR INPUTS – Door and Motion Detection
-    # ═════════════════════════════════════════════════════════════════════════════════
+    # ── Core sensors ──────────────────────────────────────────────────────────
 
     door_sensors:
       name: Door sensors
-      description: |
-        Binary sensors that detect when doors open/close (e.g., magnetic door sensors,
-        motion-based door detectors). When any door is opened, all lights turn on
-        and the timer pauses. When the door closes, the timer resumes.
-
-        Example entities: binary_sensor.living_room_door, binary_sensor.kitchen_door
+      description: >
+        Binary sensors that detect when doors open/close. When any door opens,
+        all lights turn on and the motion timer pauses. When the door closes,
+        the timer resumes.
       selector:
         entity:
           filter:
-            domain: binary_sensor
+            - domain: binary_sensor
           multiple: true
+          reorder: false
 
     motion_sensors:
       name: Motion sensors
-      description: |
-        Binary sensors that detect occupancy/motion in the room. When motion is detected,
-        the timer is reset to the full duration. If motion stops and the timer expires,
-        lights will turn off (unless bypass is enabled or more motion is detected).
-
-        The automation checks for motion when the timer expires to determine if lights
-        should turn off or stay on for 5 more minutes. Leave empty to disable motion
-        detection and rely only on door/button triggers.
-
-        Example entities: binary_sensor.living_room_motion, binary_sensor.motion_sensor_hallway
+      description: >
+        Binary sensors that detect occupancy/motion. When motion is detected
+        the timer resets. Leave empty to rely only on door/button triggers.
       default: []
       selector:
         entity:
           filter:
-            domain: binary_sensor
+            - domain: binary_sensor
           multiple: true
+          reorder: false
 
     bypass_action_sensors:
       name: Bypass action sensors (optional)
-      description: |
-        Event/sensor entities that can trigger bypass toggling through their state changes.
-        These typically come from remote controls or button press events where:
-        - "single" state → ENABLE bypass (prevent auto turn-off)
-        - "double" state → DISABLE bypass (allow auto turn-off)
-        - Other states are ignored
-
-        This is useful for remotes where single-press enables manual control mode
-        and double-press returns to automatic mode. Leave empty if not using this feature.
-
-        Example entities: event.remote_button_single_press, sensor.button_state
+      description: >
+        Sensor/event entities whose state drives bypass toggling.
+        "single" → ENABLE bypass. "double" → DISABLE bypass.
       default: []
       selector:
         entity:
           filter:
-            domain: sensor
+            - domain: sensor
           multiple: true
+          reorder: false
 
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # TIMER INPUT – Controls Light Duration
-    # ═════════════════════════════════════════════════════════════════════════════════
-
-    timer_entity:
-      name: Motion timer
-      description: |
-        Timer entity that controls how long lights stay on. The timer is:
-        - Reset whenever motion is detected or a door is opened
-        - Paused when a door is opened (waits for door close)
-        - Expires and triggers a check for whether lights should turn off
-
-        Create this helper via: Settings > Devices & Services > Helpers > Create Helper > Timer
-
-        e.g., timer.living_room_lights
-      selector:
-        entity:
-          filter:
-            domain: timer
-          multiple: false
-
-    timer_reset_duration:
-      name: Timer reset duration
-      description: |
-        How long the timer should stay active after each motion detection or door trigger.
-        Recommended range: 5-30 minutes depending on your use case.
-
-        Format: HH:MM:SS
-        Examples:
-        - 00:05:00 = 5 minutes (fast, for hallways or bathrooms)
-        - 00:15:00 = 15 minutes (moderate, good for living areas)
-        - 00:30:00 = 30 minutes (long, for spaces where people might be still)
-      default: '00:20:00'
-      selector:
-        text:
-
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # LIGHT ENTITY INPUTS – Configure which lights are controlled
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # Note: Leave each group empty if you don't have that light type in your room
+    # ── Lights ────────────────────────────────────────────────────────────────
 
     toggle_entities:
       name: Toggle lights (simple on/off)
-      description: |
-        Standard lights that only support on/off (no brightness control).
-        These are turned on/off with no other modifications.
-
-        When ON (via door/motion): Turned fully on
-        When OFF (via timer): Turned fully off
-
-        Example entities: light.ceiling_bulb, light.floor_lamp
-        Leave empty if you have no toggle lights.
+      description: Lights that only support on/off (no brightness control).
       default: []
       selector:
         entity:
           filter:
-            domain: light
+            - domain: light
           multiple: true
+          reorder: false
 
     dimmer_entities:
       name: Dimmer lights
-      description: |
-        Dimmable lights (support 0-100% brightness control).
-        These are set to 100% brightness when turned on.
-
-        When ON (via door/motion): Set to 100% brightness
-        When OFF (via timer): Turned fully off
-
-        Example entities: light.bedroom_dimmer, light.kitchen_dimmer
-        Leave empty if you have no dimmable lights.
+      description: Dimmable lights — set to 100 % brightness when turned on.
       default: []
       selector:
         entity:
           filter:
-            domain: light
+            - domain: light
           multiple: true
+          reorder: false
 
     rgbw_entities:
       name: RGBW lights (color + white + brightness)
-      description: |
-        Color lights with separate white channel (RGB + White). These support color,
-        brightness, and white channel control.
-
-        When ON (via door/motion): Set to neutral white (6500K), 100% brightness
-        When OFF (via timer): Turned fully off
-
-        RGBW lights include devices like LIFX, Philips Hue, and other smart bulbs
-        that have independent RGB and white components.
-
-        Example entities: light.hue_color_bulb_1, light.rgb_white_lamp
-        Leave empty if you have no RGBW lights.
+      description: Color lights with separate white channel. Set to 6500 K / 100 % on trigger.
       default: []
       selector:
         entity:
           filter:
-            domain: light
+            - domain: light
           multiple: true
+          reorder: false
 
     rgb_entities:
       name: RGB lights (color + brightness only)
-      description: |
-        Color lights without a separate white channel (RGB only). These support
-        color and brightness but no color temperature.
-
-        When ON (via door/motion): Set to white (255,255,255), 100% brightness
-        When OFF (via timer): Turned fully off
-
-        RGB-only lights include many smart LED strips and budget smart bulbs
-        that lack a dedicated white channel.
-
-        Example entities: light.led_strip, light.rgb_smart_bulb
-        Leave empty if you have no RGB lights.
+      description: Color lights without white channel. Set to white 255,255,255 / 100 % on trigger.
       default: []
       selector:
         entity:
           filter:
-            domain: light
+            - domain: light
           multiple: true
+          reorder: false
 
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # BUTTON/PADDLE INPUTS – Optional Remote Control Support
-    # ═════════════════════════════════════════════════════════════════════════════════
+    # ── Motion timer ──────────────────────────────────────────────────────────
+
+    timer_entity:
+      name: Motion timer
+      description: >
+        Timer that controls how long lights stay on after motion/door events.
+        Create via Settings → Helpers → Timer.
+      selector:
+        entity:
+          filter:
+            - domain: timer
+          multiple: false
+          reorder: false
+
+    timer_reset_duration:
+      name: Timer reset duration
+      description: "How long the timer stays active after each trigger. Format: HH:MM:SS"
+      default: "00:20:00"
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+    # ── Paddle events ─────────────────────────────────────────────────────────
 
     top_paddle_events:
       name: Top paddle event entities (optional)
-      description: |
-        Event entities that fire when a "top" button/paddle is pressed on a smart remote.
-        This can trigger custom actions like scene changes or bypass toggling.
-
-        Supported events:
-        - KeyPressed → Top paddle single-tap
-        - KeyPressed2x → Top paddle double-tap
-
-        Top paddle double-tap can automatically ENABLE the bypass helper
-        if one is configured.
-
-        Example entities: event.my_remote_top_button, event.switch_top_paddle
-        Leave empty if you don't have a top button/paddle.
+      description: >
+        Event entities fired when a top button/paddle is pressed.
+        Single-tap → lights on. Double-tap → enables bypass.
       default: []
       selector:
         entity:
           filter:
-            domain: event
+            - domain: event
           multiple: true
+          reorder: false
 
     bottom_paddle_events:
       name: Bottom paddle event entities (optional)
-      description: |
-        Event entities that fire when a "bottom" button/paddle is pressed on a smart remote.
-        This can trigger custom actions like turning off specific lights.
-
-        Supported events:
-        - KeyPressed → Bottom paddle single-tap
-        - KeyPressed2x → Bottom paddle double-tap
-
-        Bottom paddle double-tap can automatically DISABLE the bypass helper
-        if one is configured.
-
-        Example entities: event.my_remote_bottom_button, event.switch_bottom_paddle
-        Leave empty if you don't have a bottom button/paddle.
+      description: >
+        Event entities fired when a bottom button/paddle is pressed.
+        Single-tap → lights off. Double-tap → disables bypass.
       default: []
       selector:
         entity:
           filter:
-            domain: event
+            - domain: event
           multiple: true
+          reorder: false
 
-    # ═════════════════════════════════════════════════════════════════════════════════
-    # BYPASS HELPER INPUT – Optional Manual Control Override
-    # ═════════════════════════════════════════════════════════════════════════════════
+    # ── Bypass helper ─────────────────────────────────────────────────────────
 
     bypass_boolean:
       name: Bypass helper input_boolean (optional)
-      description: |
-        Optional toggle helper that enables/disables automatic light control.
-
-        When ENABLED (ON):
-        - Lights won't turn off when the timer expires
-        - Manual control only (use buttons or manual actions)
-        - Useful for watching TV, reading, or when you want lights to stay on
-
-        When DISABLED (OFF):
-        - Normal automatic behavior resumes
-        - Lights will turn off when timer expires and no motion is detected
-
-        This helper can be toggled by:
-        1. Double-tap events on configured button paddles
-        2. State changes on bypass_action_sensors
-        3. Manual toggle in Home Assistant UI
-
-        To create: Settings > Devices & Services > Helpers > Create Helper > Toggle Helper
-        Then configure the resulting entity (e.g., input_boolean.living_room_lights_bypass)
-
-        Leave empty to disable bypass logic entirely and always allow auto turn-off.
-      default: ''
+      description: >
+        When ON: lights won't turn off when the timer expires.
+        Toggle via double-tap paddles, bypass_action_sensors, or manually.
+        Leave empty to disable bypass logic.
+      default: ""
       selector:
         entity:
           filter:
-            domain: input_boolean
+            - domain: input_boolean
           multiple: false
+          reorder: false
+
+    # ── Max-on safety shutoff ─────────────────────────────────────────────────
+
+    max_on_timer:
+      name: Max-on safety timer (optional)
+      description: >
+        A second timer used to enforce a maximum continuous on-time.
+        When this timer expires the lights are forced off (after an optional
+        warning period). Leave empty to disable max-on safety logic.
+        Create via Settings → Helpers → Timer.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain: timer
+          multiple: false
+          reorder: false
+
+    max_on_duration:
+      name: Max-on duration
+      description: >
+        How long lights may stay on continuously before the safety shutoff
+        triggers. Only used when a max_on_timer is configured.
+        Format: HH:MM:SS  (default 1 hour)
+      default: "01:00:00"
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+    warning_timer:
+      name: Warning timer entity (optional)
+      description: >
+        Timer used for the pre-shutoff warning window. When the max-on timer
+        expires this timer starts; when it expires the lights turn off.
+        Leave empty to skip the warning and shut off immediately.
+        Create via Settings → Helpers → Timer.
+      default: ""
+      selector:
+        entity:
+          filter:
+            - domain: timer
+          multiple: false
+          reorder: false
+
+    warning_duration:
+      name: Warning period duration
+      description: >
+        How long to wait after the max-on warning before forcing lights off.
+        Only used when a warning_timer is configured.
+        Format: HH:MM:SS  (default 5 minutes)
+      default: "00:05:00"
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+    extend_duration:
+      name: Extend duration (when bottom paddle pressed during warning)
+      description: >
+        If the bottom paddle is pressed during the warning window the max-on
+        timer is restarted with this duration instead of the original
+        max_on_duration. Format: HH:MM:SS  (default 30 minutes)
+      default: "00:30:00"
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+    # ── Fallback shutoff ──────────────────────────────────────────────────────
+
+    enable_fallback_shutoff:
+      name: Enable fallback shutoff
+      description: >
+        When enabled, all lights are forced off at the configured time
+        every night and all timers are cancelled.
+      default: false
+      selector:
+        boolean:
+
+    fallback_shutoff_time:
+      name: Fallback shutoff time
+      description: >
+        Time of day to force lights off when fallback shutoff is enabled.
+      default: "00:00:00"
+      selector:
+        time:
+
+    # ── Notifications ─────────────────────────────────────────────────────────
+
+    notification_service:
+      name: Notification service (optional)
+      description: >
+        Service to call for max-on warnings and fallback shutoff messages,
+        e.g. notify.notify or notify.mobile_app_isaac_iphone_16.
+        Leave empty to skip notifications.
+      default: ""
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+    notification_title:
+      name: Notification title prefix
+      description: Prefix used in notification titles (e.g. "Basement").
+      default: "Lights"
+      selector:
+        text:
+          multiple: false
+          multiline: false
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+
+trigger:
+  - platform: state
+    entity_id: !input door_sensors
+    to: "on"
+    id: door_opened
+
+  - platform: state
+    entity_id: !input door_sensors
+    to: "off"
+    id: door_closed
+
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "on"
+    id: motion_detected
+
+  - platform: state
+    entity_id: !input top_paddle_events
+    id: top_single
+    attribute: event_type
+    to: "KeyPressed"
+
+  - platform: state
+    entity_id: !input top_paddle_events
+    id: top_double
+    attribute: event_type
+    to: "KeyPressed2x"
+
+  - platform: state
+    entity_id: !input bottom_paddle_events
+    id: bottom_single
+    attribute: event_type
+    to: "KeyPressed"
+
+  - platform: state
+    entity_id: !input bottom_paddle_events
+    id: bottom_double
+    attribute: event_type
+    to: "KeyPressed2x"
+
+  - platform: state
+    entity_id: !input bypass_action_sensors
+    to: "single"
+    id: bypass_enable
+
+  - platform: state
+    entity_id: !input bypass_action_sensors
+    to: "double"
+    id: bypass_disable
+
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input timer_entity
+    id: motion_timer_expired
+
+  # Max-on timer triggers
+  - platform: state
+    entity_id: !input toggle_entities
+    to: "on"
+    id: lights_turned_on
+
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input max_on_timer
+    id: max_on_timer_expired
+
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input warning_timer
+    id: warning_timer_expired
+
+  # Fallback shutoff
+  - platform: time
+    at: !input fallback_shutoff_time
+    id: fallback_shutoff
+
+# ── Variables ─────────────────────────────────────────────────────────────────
 
 variables:
-  # Load all configured input values into variables for use throughout the automation
-  timer_reset_duration: !input timer_reset_duration
   bypass_boolean: !input bypass_boolean
+  max_on_timer: !input max_on_timer
+  warning_timer: !input warning_timer
+  notification_service: !input notification_service
+  notification_title: !input notification_title
+  enable_fallback_shutoff: !input enable_fallback_shutoff
   toggle_entities: !input toggle_entities
   dimmer_entities: !input dimmer_entities
   rgbw_entities: !input rgbw_entities
   rgb_entities: !input rgb_entities
-  motion_sensors: !input motion_sensors
-  # Determine if lights should turn off when timer ends
-  # If no bypass helper is configured → always turn off lights
-  # If bypass helper exists → only turn off if it's currently OFF (not bypassing)
-  turn_off_lights_when_timer_ends: >-
-    {% if bypass_boolean == '' %}
-      true                     # no bypass helper → always turn off
-    {% else %}
-      {{ states(bypass_boolean) == 'off' }} # bypass helper supplied and off
-    {% endif %}
 
-trigger:
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Door opened
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When a door is opened: pause timer and turn on all lights
-  - trigger: state
-    entity_id: !input door_sensors
-    to: 'on'
-    from: 'off'
-    id: door_opened
+# ── Mode ──────────────────────────────────────────────────────────────────────
 
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Door closed
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When a door is closed: resume the timer (lights turn on if they weren't already)
-  - trigger: state
-    entity_id: !input door_sensors
-    to: 'off'
-    from: 'on'
-    id: door_closed
+mode: queued
+max: 10
 
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Motion detected
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When any motion sensor detects motion: turn on lights and reset timer
-  - trigger: state
-    entity_id: !input motion_sensors
-    to: 'on'
-    id: motion_detected
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Timer expires (goes to idle)
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When the timer reaches idle (expires): check if motion is still present
-  # If yes → reset timer for 5 minutes; If no → turn off lights (unless bypassed)
-  - trigger: state
-    entity_id: !input timer_entity
-    from: '*'
-    to: idle
-    id: motion_timer_ended
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Top button single-tap
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When top paddle single-tap: same as motion (turn on lights + reset timer)
-  - trigger: state
-    entity_id: !input top_paddle_events
-    attribute: event_type
-    from: '*'
-    to: KeyPressed
-    id: top_paddle_single
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Bottom button single-tap
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When bottom paddle single-tap: turn off all lights immediately
-  - trigger: state
-    entity_id: !input bottom_paddle_events
-    attribute: event_type
-    from: '*'
-    to: KeyPressed
-    id: bottom_paddle_single
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Top button double-tap
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When top paddle double-tap: enable bypass (if configured)
-  - trigger: state
-    entity_id: !input top_paddle_events
-    attribute: event_type
-    from: '*'
-    to: KeyPressed2x
-    id: top_paddle_double
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Bottom button double-tap
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When bottom paddle double-tap: disable bypass (if configured)
-  - trigger: state
-    entity_id: !input bottom_paddle_events
-    attribute: event_type
-    from: '*'
-    to: KeyPressed2x
-    id: bottom_paddle_double
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Bypass action sensor – single state
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When a bypass action sensor changes to "single": enable bypass
-  - trigger: state
-    entity_id: !input bypass_action_sensors
-    to: 'single'
-    id: bypass_action_single
-
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # TRIGGER: Bypass action sensor – double state
-  # ═══════════════════════════════════════════════════════════════════════════════════
-  # When a bypass action sensor changes to "double": disable bypass
-  - trigger: state
-    entity_id: !input bypass_action_sensors
-    to: 'double'
-    id: bypass_action_double
-
-# No global conditions – each branch of the choose statement has its own conditions
-condition: []
+# ── Actions ───────────────────────────────────────────────────────────────────
 
 action:
   - choose:
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Door opened
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When door opens: pause timer and turn on all lights
-      - conditions:
-          - condition: trigger
-            id: door_opened
-            alias: A door was opened
-        sequence:
-          - parallel:
-              # Pause the timer (don't let it expire while the door is open)
-              - alias: Reset and pause the timer
-                sequence:
-                  - action: timer.set_duration
-                    data:
-                      duration: '{{ timer_reset_duration }}'
-                    target:
-                      entity_id: !input timer_entity
-                  - action: timer.pause
-                    target:
-                      entity_id: !input timer_entity
-              # Turn on all configured light entities
-              - alias: Turn on all lights due to the door opening
-                continue_on_error: true
-                sequence: &turn_on_lights
-                  - parallel:
-                      # Turn on toggle lights (simple on/off, no brightness)
-                      - alias: Turn on toggles
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ toggle_entities | length }}'
-                              sequence:
-                                - action: light.turn_on
-                                  target:
-                                    entity_id: '{{ toggle_entities[repeat.index - 1] }}'
 
-                      # Turn on dimmer lights at full brightness (100%)
-                      - alias: Turn on dimmers
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ dimmer_entities | length }}'
-                              sequence:
-                                - action: light.turn_on
-                                  data:
-                                    brightness_pct: 100
-                                  target:
-                                    entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
+    # ── Door opened: lights on, pause motion timer ────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: door_opened
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ toggle_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input toggle_entities
+        - if:
+            - condition: template
+              value_template: "{{ dimmer_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input dimmer_entities
+              data:
+                brightness_pct: 100
+        - if:
+            - condition: template
+              value_template: "{{ rgbw_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input rgbw_entities
+              data:
+                color_temp_kelvin: 6500
+                brightness_pct: 100
+        - if:
+            - condition: template
+              value_template: "{{ rgb_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input rgb_entities
+              data:
+                rgb_color: [255, 255, 255]
+                brightness_pct: 100
+        - action: timer.pause
+          target:
+            entity_id: !input timer_entity
 
-                      # Turn on RGBW lights: neutral white (6500K) at 100% brightness
-                      - alias: Turn on RGBW devices
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ rgbw_entities | length }}'
-                              sequence:
-                                - action: light.turn_on
-                                  data:
-                                    color_temp_kelvin: 6500
-                                    brightness_pct: 100
-                                  target:
-                                    entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
+    # ── Door closed: resume motion timer ─────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: door_closed
+      sequence:
+        - action: timer.start
+          target:
+            entity_id: !input timer_entity
+          data:
+            duration: !input timer_reset_duration
 
-                      # Turn on RGB lights: white (255,255,255) at 100% brightness
-                      - alias: Turn on RGB devices
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ rgb_entities | length }}'
-                              sequence:
-                                - action: light.turn_on
-                                  data:
-                                    rgb_color: [255, 255, 255]
-                                    brightness_pct: 100
-                                  target:
-                                    entity_id: '{{ rgb_entities[repeat.index - 1] }}'
+    # ── Motion detected: reset motion timer ───────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: motion_detected
+      sequence:
+        - action: timer.start
+          target:
+            entity_id: !input timer_entity
+          data:
+            duration: !input timer_reset_duration
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Door closed
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When door closes: resume timer (and turn on lights if not already on)
-      - conditions:
-          - condition: trigger
-            id: door_closed
-            alias: A door was closed
-        sequence:
-          - alias: Start the timer due to the door closing
-            sequence: &start_timer
-              - action: timer.start
-                data:
-                  duration: '{{ timer_reset_duration }}'
-                target:
-                  entity_id: !input timer_entity
+    # ── Top single: lights on ─────────────────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: top_single
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ toggle_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input toggle_entities
+        - if:
+            - condition: template
+              value_template: "{{ dimmer_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input dimmer_entities
+              data:
+                brightness_pct: 100
+        - if:
+            - condition: template
+              value_template: "{{ rgbw_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input rgbw_entities
+              data:
+                color_temp_kelvin: 6500
+                brightness_pct: 100
+        - if:
+            - condition: template
+              value_template: "{{ rgb_entities | length > 0 }}"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: !input rgb_entities
+              data:
+                rgb_color: [255, 255, 255]
+                brightness_pct: 100
+        - action: timer.start
+          target:
+            entity_id: !input timer_entity
+          data:
+            duration: !input timer_reset_duration
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Motion detected
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When motion is detected: turn on lights and reset timer
-      - conditions:
-          - condition: trigger
-            id: motion_detected
-            alias: Motion was detected
-        sequence:
-          - parallel:
-              - alias: Start the timer due to motion
-                sequence: *start_timer
-              - alias: Turn on all lights due to motion
-                sequence: *turn_on_lights
+    # ── Top double: enable bypass ─────────────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: top_double
+        - condition: template
+          value_template: "{{ bypass_boolean != '' }}"
+      sequence:
+        - action: input_boolean.turn_on
+          target:
+            entity_id: !input bypass_boolean
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Top button single-tap
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When top paddle single-tapped: turn on lights and reset timer (like motion/door)
-      - conditions:
-          - condition: trigger
-            id: top_paddle_single
-            alias: A top paddle was single pressed
-        sequence:
-          - parallel:
-              - alias: Start the timer due to the single button press
-                sequence: *start_timer
-              - alias: Turn on all lights due to single button press
-                sequence: *turn_on_lights
+    # ── Bottom single during warning window: extend ───────────────────────────
+    - conditions:
+        - condition: trigger
+          id: bottom_single
+        - condition: template
+          value_template: >
+            {{ warning_timer != '' and states(warning_timer) == 'active' }}
+      sequence:
+        - action: timer.start
+          target:
+            entity_id: !input max_on_timer
+          data:
+            duration: !input extend_duration
+        - action: timer.cancel
+          target:
+            entity_id: !input warning_timer
+        - if:
+            - condition: template
+              value_template: "{{ notification_service != '' }}"
+          then:
+            - action: "{{ notification_service }}"
+              data:
+                title: "{{ notification_title }} — extended"
+                message: >
+                  {{ notification_title }} lights extended for
+                  {{ extend_duration }}.
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Bottom button single-tap
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When bottom paddle single-tapped: turn off all lights immediately and stop timer
-      - conditions:
-          - condition: trigger
-            id: bottom_paddle_single
-            alias: A bottom paddle was single pressed
-        sequence:
-          - parallel:
-              # Stop the timer (don't restart it)
-              - alias: Cancel the timer
-                sequence:
-                  - action: timer.cancel
-                    target:
-                      entity_id: !input timer_entity
-              # Turn off all configured light entities
-              - alias: Turn off all lights due to button press
-                sequence: &turn_off_lights
-                  - parallel:
-                      # Turn off toggle lights
-                      - alias: Turn off toggles
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ toggle_entities | length }}'
-                              sequence:
-                                - action: light.turn_off
-                                  target:
-                                    entity_id: '{{ toggle_entities[repeat.index - 1] }}'
+    # ── Bottom single: lights off ─────────────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: bottom_single
+      sequence:
+        - action: light.turn_off
+          target:
+            entity_id: !input toggle_entities
+        - if:
+            - condition: template
+              value_template: "{{ dimmer_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input dimmer_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgbw_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgbw_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgb_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgb_entities
+        - action: timer.cancel
+          target:
+            entity_id: !input timer_entity
+        - if:
+            - condition: template
+              value_template: "{{ max_on_timer != '' }}"
+          then:
+            - action: timer.cancel
+              target:
+                entity_id: !input max_on_timer
+        - if:
+            - condition: template
+              value_template: "{{ warning_timer != '' }}"
+          then:
+            - action: timer.cancel
+              target:
+                entity_id: !input warning_timer
 
-                      # Turn off dimmer lights
-                      - alias: Turn off dimmers
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ dimmer_entities | length }}'
-                              sequence:
-                                - action: light.turn_off
-                                  target:
-                                    entity_id: '{{ dimmer_entities[repeat.index - 1] }}'
+    # ── Bottom double: disable bypass ─────────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: bottom_double
+        - condition: template
+          value_template: "{{ bypass_boolean != '' }}"
+      sequence:
+        - action: input_boolean.turn_off
+          target:
+            entity_id: !input bypass_boolean
 
-                      # Turn off RGBW lights
-                      - alias: Turn off RGBW devices
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ rgbw_entities | length }}'
-                              sequence:
-                                - action: light.turn_off
-                                  target:
-                                    entity_id: '{{ rgbw_entities[repeat.index - 1] }}'
+    # ── Bypass enable (action sensor single) ──────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: bypass_enable
+        - condition: template
+          value_template: "{{ bypass_boolean != '' }}"
+      sequence:
+        - action: input_boolean.turn_on
+          target:
+            entity_id: !input bypass_boolean
 
-                      # Turn off RGB lights
-                      - alias: Turn off RGB devices
-                        continue_on_error: true
-                        sequence:
-                          - repeat:
-                              count: '{{ rgb_entities | length }}'
-                              sequence:
-                                - action: light.turn_off
-                                  target:
-                                    entity_id: '{{ rgb_entities[repeat.index - 1] }}'
+    # ── Bypass disable (action sensor double) ─────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: bypass_disable
+        - condition: template
+          value_template: "{{ bypass_boolean != '' }}"
+      sequence:
+        - action: input_boolean.turn_off
+          target:
+            entity_id: !input bypass_boolean
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Bypass action sensor – single (enable bypass)
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When bypass action sensor changes to "single": turn ON bypass helper
-      - conditions:
-          - condition: trigger
-            id: bypass_action_single
-            alias: A bypass button was single pushed
-        sequence: &enable_bypass
-          - action: input_boolean.turn_on
-            target:
-              entity_id: !input bypass_boolean
+    # ── Motion timer expired: check bypass, then turn off ─────────────────────
+    - conditions:
+        - condition: trigger
+          id: motion_timer_expired
+      sequence:
+        - if:
+            - condition: template
+              value_template: >
+                {{ bypass_boolean == '' or
+                   states(bypass_boolean) == 'off' }}
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input toggle_entities
+            - if:
+                - condition: template
+                  value_template: "{{ dimmer_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input dimmer_entities
+            - if:
+                - condition: template
+                  value_template: "{{ rgbw_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input rgbw_entities
+            - if:
+                - condition: template
+                  value_template: "{{ rgb_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input rgb_entities
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Bypass action sensor – double (disable bypass)
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When bypass action sensor changes to "double": turn OFF bypass helper
-      - conditions:
-          - condition: trigger
-            id: bypass_action_double
-            alias: A bypass button was double pushed
-        sequence: &disable_bypass
-          - action: input_boolean.turn_off
-            target:
-              entity_id: !input bypass_boolean
+    # ── Lights turned on: start max-on timer ──────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: lights_turned_on
+        - condition: template
+          value_template: "{{ max_on_timer != '' }}"
+      sequence:
+        - action: timer.start
+          target:
+            entity_id: !input max_on_timer
+          data:
+            duration: !input max_on_duration
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Top button double-tap (enable bypass if configured)
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When top paddle double-tapped: turn ON bypass helper (if one is configured)
-      - conditions:
-          - condition: trigger
-            id: top_paddle_double
-            alias: A top paddle was double pressed
-          # Only run if a bypass helper was actually configured (not empty string)
-          - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
-        sequence: *enable_bypass
+    # ── Max-on timer expired: warn or shut off ────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: max_on_timer_expired
+        - condition: template
+          value_template: "{{ max_on_timer != '' }}"
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ warning_timer != '' }}"
+          then:
+            - if:
+                - condition: template
+                  value_template: "{{ notification_service != '' }}"
+              then:
+                - action: "{{ notification_service }}"
+                  data:
+                    title: "{{ notification_title }} — shutoff warning"
+                    message: >
+                      {{ notification_title }} lights will turn off in
+                      {{ warning_duration }}. Press any bottom paddle to extend.
+            - action: timer.start
+              target:
+                entity_id: !input warning_timer
+              data:
+                duration: !input warning_duration
+          else:
+            - action: light.turn_off
+              target:
+                entity_id: !input toggle_entities
+            - if:
+                - condition: template
+                  value_template: "{{ dimmer_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input dimmer_entities
+            - if:
+                - condition: template
+                  value_template: "{{ rgbw_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input rgbw_entities
+            - if:
+                - condition: template
+                  value_template: "{{ rgb_entities | length > 0 }}"
+              then:
+                - action: light.turn_off
+                  target:
+                    entity_id: !input rgb_entities
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Bottom button double-tap (disable bypass if configured)
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # When bottom paddle double-tapped: turn OFF bypass helper (if one is configured)
-      - conditions:
-          - condition: trigger
-            id: bottom_paddle_double
-            alias: A bottom paddle was double pressed
-          # Only run if a bypass helper was actually configured (not empty string)
-          - condition: template
-            value_template: "{{ bypass_boolean != '' | bool }}"
-        sequence: *disable_bypass
+    # ── Warning timer expired: force off ─────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: warning_timer_expired
+        - condition: template
+          value_template: "{{ warning_timer != '' }}"
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ notification_service != '' }}"
+          then:
+            - action: "{{ notification_service }}"
+              data:
+                title: "{{ notification_title }} — turning off"
+                message: "Turning off {{ notification_title }} lights now due to timeout."
+        - action: light.turn_off
+          target:
+            entity_id: !input toggle_entities
+        - if:
+            - condition: template
+              value_template: "{{ dimmer_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input dimmer_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgbw_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgbw_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgb_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgb_entities
+        - action: timer.cancel
+          target:
+            entity_id: !input max_on_timer
 
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # ACTION: Timer expires (motion timer reaches idle)
-      # ═════════════════════════════════════════════════════════════════════════════════
-      # This is the core smart logic: when timer expires, check if motion is still present
-      # - If motion detected → reset timer for 5 more minutes and keep lights on
-      # - If no motion AND bypass is OFF → turn off lights
-      # - If bypass is ON → do nothing (manual control mode)
-      - conditions:
-          - condition: trigger
-            id: motion_timer_ended
-        sequence:
-          # Set up variables to check current motion status and log debug info
-          - variables:
-              # Check if ANY motion sensor is currently ON
-              is_any_motion_now: >-
-                {% if motion_sensors | length == 0 %}
-                  false
-                {% else %}
-                  {{ expand(motion_sensors) | selectattr('state','equalto','on') | list | length > 0 }}
-                {% endif %}
-              # Prepare a detailed status string with all motion sensor states (for debugging)
-              motion_sensor_states: >-
-                {{ expand(motion_sensors) | map(attribute='entity_id') | list | join(', ') }}
-                {{ expand(motion_sensors) | map(attribute='state') | list | join(', ') }}
-
-          # Log detailed information about the timer expiration decision
-          - action: logbook.log
-            data:
-              name: 'Lights Controller'
-              message: >-
-                Timer ended. Motion check: {{ is_any_motion_now }}.
-                Bypass: {{ bypass_boolean }} ({{ states(bypass_boolean) if bypass_boolean != '' else 'N/A' }}).
-                Turn off allowed: {{ turn_off_lights_when_timer_ends }}.
-                Motion sensors: {{ motion_sensor_states }}
-
-          # Smart decision logic for what to do when timer expires
-          - choose:
-              # CASE 1: Motion is still being detected
-              - conditions:
-                  - condition: template
-                    value_template: '{{ is_any_motion_now | bool }}'
-                sequence:
-                  # Log that we're keeping lights on due to continued motion
-                  - action: logbook.log
-                    data:
-                      name: 'Lights Controller'
-                      message: 'Motion still detected, resetting timer for 5 minutes'
-                  # Reset timer for 5 minutes (shorter duration while awaiting motion to stop)
-                  - alias: Reset timer for 5 minutes because motion still present
-                    sequence:
-                      - action: timer.set_duration
-                        data:
-                          duration: '00:05:00'
-                        target:
-                          entity_id: !input timer_entity
-                      - action: timer.start
-                        target:
-                          entity_id: !input timer_entity
-
-              # CASE 2: No motion AND bypass is OFF (automatic control allowed)
-              - conditions:
-                  - condition: template
-                    value_template: '{{ turn_off_lights_when_timer_ends | bool }}'
-                sequence:
-                  # Log that we're turning lights off
-                  - action: logbook.log
-                    data:
-                      name: 'Lights Controller'
-                      message: 'No motion detected and bypass off, turning lights off'
-                  # Execute the turn-off sequence
-                  - sequence: *turn_off_lights
-
-            # CASE 3: Bypass is ON (manual control mode – do nothing)
-            default:
-              - action: logbook.log
-                data:
-                  name: 'Lights Controller'
-                  message: 'Bypass is ON, not turning lights off'
-
-    # If no trigger matched (shouldn't happen), do nothing
-    default: []
-
-# Only allow one automation run at a time (prevents simultaneous light control commands)
-mode: single
+    # ── Fallback shutoff ──────────────────────────────────────────────────────
+    - conditions:
+        - condition: trigger
+          id: fallback_shutoff
+        - condition: template
+          value_template: "{{ enable_fallback_shutoff }}"
+      sequence:
+        - action: light.turn_off
+          target:
+            entity_id: !input toggle_entities
+        - if:
+            - condition: template
+              value_template: "{{ dimmer_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input dimmer_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgbw_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgbw_entities
+        - if:
+            - condition: template
+              value_template: "{{ rgb_entities | length > 0 }}"
+          then:
+            - action: light.turn_off
+              target:
+                entity_id: !input rgb_entities
+        - action: timer.cancel
+          target:
+            entity_id: !input timer_entity
+        - if:
+            - condition: template
+              value_template: "{{ max_on_timer != '' }}"
+          then:
+            - action: timer.cancel
+              target:
+                entity_id: !input max_on_timer
+        - if:
+            - condition: template
+              value_template: "{{ warning_timer != '' }}"
+          then:
+            - action: timer.cancel
+              target:
+                entity_id: !input warning_timer
+        - if:
+            - condition: template
+              value_template: "{{ notification_service != '' }}"
+          then:
+            - action: "{{ notification_service }}"
+              data:
+                title: "{{ notification_title }} — fallback shutoff"
+                message: "{{ notification_title }} lights turned off by fallback shutoff."

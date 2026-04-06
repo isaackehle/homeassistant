@@ -55,13 +55,17 @@ def test_trigger_ids_cover_door_motion_timer_and_buttons():
         "door_opened",
         "door_closed",
         "motion_detected",
-        "motion_timer_ended",
-        "top_paddle_single",
-        "bottom_paddle_single",
-        "top_paddle_double",
-        "bottom_paddle_double",
-        "bypass_action_single",
-        "bypass_action_double",
+        "motion_timer_expired",
+        "top_single",
+        "bottom_single",
+        "top_double",
+        "bottom_double",
+        "bypass_enable",
+        "bypass_disable",
+        "lights_turned_on",
+        "max_on_timer_expired",
+        "warning_timer_expired",
+        "fallback_shutoff",
     }
     assert expected_ids.issubset(trigger_ids)
 
@@ -72,8 +76,8 @@ def test_actions_include_light_and_timer_control_paths():
     assert "action: light.turn_off" in action_blob
     assert "action: timer.start" in action_blob
     assert "action: timer.pause" in action_blob
-    assert "action: timer.set_duration" in action_blob
+    assert "action: timer.cancel" in action_blob
 
 
-def test_uses_single_mode():
-    assert _load_blueprint().get("mode") == "single"
+def test_uses_queued_mode():
+    assert _load_blueprint().get("mode") == "queued"
