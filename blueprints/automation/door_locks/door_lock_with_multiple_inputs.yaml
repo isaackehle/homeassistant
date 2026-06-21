@@ -134,6 +134,13 @@ blueprint:
       selector:
         boolean: {}
 
+    auto_lock_night_time:
+      name: Night-time auto-lock
+      description: Lock the door at this time every night (24h format, e.g. 21:00). Leave blank to disable.
+      default: '21:00:00'
+      selector:
+        time: {}
+
 mode: restart
 max_exceeded: silent
 
@@ -190,6 +197,11 @@ triggers:
     entity_id: !input run_now_sensors
     to: Press
     id: run_now_trigger
+
+  # Night-time auto-lock
+  - id: night_time
+    trigger: time
+    at: !input auto_lock_night_time
 
 actions:
   # -------- DEBUG: snapshot everything on EVERY trigger --------
@@ -366,6 +378,23 @@ actions:
           - condition: template
             value_template: '{{ door_is_closed }}'
         sequence:
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+      # Case 4: Night-time auto-lock
+      - conditions:
+          - condition: trigger
+            id: night_time
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+          - condition: template
+            value_template: '{{ door_is_closed }}'
+        sequence:
+          - delay: !input grace_before_lock
+          - condition: template
+            value_template: '{{ door_is_closed }}'
           - action: 'lock.lock'
             target:
               entity_id: !input lock_entity

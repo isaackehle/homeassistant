@@ -57,6 +57,7 @@ def test_has_expected_trigger_ids_for_core_paths():
         "away",
         "override_changed",
         "run_now_trigger",
+        "night_time",
     }
     assert expected.issubset(trigger_ids)
 
