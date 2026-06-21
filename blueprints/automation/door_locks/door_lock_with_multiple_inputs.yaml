@@ -294,6 +294,8 @@ actions:
             value_template: '{{ door_is_closed }}'
         sequence:
           - delay: !input grace_before_lock
+          - condition: template
+            value_template: '{{ door_is_closed }}'
           - action: 'lock.lock'
             target:
               entity_id: !input lock_entity
