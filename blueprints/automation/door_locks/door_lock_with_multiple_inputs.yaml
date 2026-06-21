@@ -136,10 +136,11 @@ blueprint:
 
     auto_lock_night_time:
       name: Night-time auto-lock
-      description: Lock the door at this time every night (24h format, e.g. 21:00). Leave blank to disable.
+      description: Lock the door at this time every night (24h format, e.g. 21:00:00). Leave blank to disable.
       default: '21:00:00'
       selector:
-        time: {}
+        text:
+          type: time
 
 mode: restart
 max_exceeded: silent
