@@ -142,7 +142,7 @@ blueprint:
         seconds: 0
       description: >
         If the lock has been unlocked this long while the door is closed (for example after
-        an arrival auto-unlock), lock it again. Set to 00:00:00 to disable.
+        an arrival auto-unlock), lock it again. Use a long duration (e.g. 12 hours) to effectively disable.
       selector:
         duration: {}
 

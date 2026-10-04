@@ -81,7 +81,7 @@ A comprehensive Home Assistant blueprint for automatic door locking with safety 
 - Trigger: Lock has been `unlocked` for `relock_after_unlocked` (default 15 minutes)
 - Condition: Door is closed AND lock is still unlocked
 - Action: Wait grace period, re-check, lock
-- Covers arrival auto-unlocks and manual unlocks where the door is never opened. Set the input to 00:00:00 to disable.
+- Covers arrival auto-unlocks and manual unlocks where the door is never opened. Use a long duration (e.g. 12 hours) to effectively disable it.
 
 ## Safety Features
 
