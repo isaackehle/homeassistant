@@ -72,6 +72,17 @@ A comprehensive Home Assistant blueprint for automatic door locking with safety 
 - Condition: Door is closed AND lock is unlocked
 - Action: Lock immediately (no grace period)
 
+### Case 4: Night-time
+- Trigger: configured night time (default 21:00)
+- Condition: Door is closed AND lock is unlocked
+- Action: Wait grace period, re-check, lock
+
+### Case 5: Unlocked While Closed (re-lock)
+- Trigger: Lock has been `unlocked` for `relock_after_unlocked` (default 15 minutes)
+- Condition: Door is closed AND lock is still unlocked
+- Action: Wait grace period, re-check, lock
+- Covers arrival auto-unlocks and manual unlocks where the door is never opened. Set the input to 00:00:00 to disable.
+
 ## Safety Features
 
 - **Never locks open doors**: Always verifies door is closed before locking

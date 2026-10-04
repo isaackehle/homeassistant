@@ -134,6 +134,18 @@ blueprint:
       selector:
         boolean: {}
 
+    relock_after_unlocked:
+      name: Re-lock after unlocked (door closed)
+      default:
+        hours: 0
+        minutes: 15
+        seconds: 0
+      description: >
+        If the lock has been unlocked this long while the door is closed (for example after
+        an arrival auto-unlock), lock it again. Set to 00:00:00 to disable.
+      selector:
+        duration: {}
+
     auto_lock_night_time:
       name: Night-time auto-lock
       description: Lock the door at this time every night (24h format, e.g. 21:00:00). Leave blank to disable.
@@ -198,6 +210,13 @@ triggers:
     entity_id: !input run_now_sensors
     to: Press
     id: run_now_trigger
+
+  # Unlocked (door closed) for too long, e.g. after an arrival unlock
+  - id: unlocked_while_closed
+    trigger: state
+    entity_id: !input lock_entity
+    to: 'unlocked'
+    for: !input relock_after_unlocked
 
   # Night-time auto-lock
   - id: night_time
@@ -387,6 +406,23 @@ actions:
       - conditions:
           - condition: trigger
             id: night_time
+          - condition: state
+            entity_id: !input lock_entity
+            state: 'unlocked'
+          - condition: template
+            value_template: '{{ door_is_closed }}'
+        sequence:
+          - delay: !input grace_before_lock
+          - condition: template
+            value_template: '{{ door_is_closed }}'
+          - action: 'lock.lock'
+            target:
+              entity_id: !input lock_entity
+
+      # Case 5: Unlocked while door closed for too long — lock
+      - conditions:
+          - condition: trigger
+            id: unlocked_while_closed
           - condition: state
             entity_id: !input lock_entity
             state: 'unlocked'
